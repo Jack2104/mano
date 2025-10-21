@@ -16,7 +16,7 @@ namespace nc
     {
     public:
         Window();
-        Window(int height, int width, int row, int col);
+        Window(int win_height, int win_width, int win_row, int win_col);
         ~Window();
 
         // Non-copyable. Windows are unique.
@@ -27,25 +27,53 @@ namespace nc
         Window(Window &&window) = default;
         Window &operator=(Window &&window) = default;
 
-        void set_cursor_position(int row, int col);
+        void move_cursor(int row, int col);
         void display_text(std::string text);
         int get_input();
 
         void reload();
-        void resize(int new_width, int new_height);
+        void resize(int new_height, int new_width);
+        void reposition(int new_row, int new_col);
+
+        int get_width();
+        int get_height();
 
     protected:
-        WINDOW *window_ptr;
+        WINDOW *window_ptr; // Not a unique_ptr because WINDOW* has a special delete function
 
         int width;
         int height;
         int row;
         int col;
+
+        std::string current_text;
     };
 
     class Layout
     {
     public:
+        Layout();
+        Layout(int height, int width);
+
+        /* Returns Layout& to allow chaining, i.e. layout.add(win1).add(win2) */
+        Layout &add(Window &window);
+        Layout &add(Window &window, int height, bool expanding = false);
+        void refresh();
+
     protected:
+        int max_width;
+        int max_height;
+
+        int total_width;
+        int total_height;
+
+        struct WindowInfo
+        {
+            Window &window;
+            int height;
+            bool expanding;
+        };
+
+        std::vector<WindowInfo> window_details;
     };
 } /* namespace nc */

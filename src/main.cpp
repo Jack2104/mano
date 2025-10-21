@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include "Screen.h"
 #include "ncurses_utilities.h"
 
 void setup()
@@ -43,14 +42,20 @@ int main(int argc, char *argv[])
     int cursor_x = 0;
     int cursor_y = 0;
 
-    // Screen screen(getmaxy(stdscr), getmaxx(stdscr));
-    // screen.set_title_bar_text("title bar");
-    // screen.set_display_text("display area");
-    // screen.set_command_bar_text("command bar");
-
     nc::Window title_bar(1, nc::cols(), 0, 0);
     nc::Window editor(nc::rows() - 2, nc::cols(), 1, 0);
     nc::Window command_bar(1, nc::cols(), nc::rows() - 1, 0);
+
+    // nc::Window title_bar;
+    // nc::Window editor;
+    // nc::Window command_bar;
+
+    title_bar.display_text("title bar");
+    command_bar.display_text("command bar");
+
+    nc::Layout layout;
+    layout.add(title_bar, 1).add(editor).add(command_bar, 1);
+    layout.refresh();
 
     while (true)
     {
@@ -62,7 +67,7 @@ int main(int argc, char *argv[])
         }
         else if (ch == KEY_RESIZE)
         {
-            // refresh();
+            title_bar.reload();
         }
         else if (ch == KEY_BACKSPACE)
         {
@@ -94,17 +99,13 @@ int main(int argc, char *argv[])
         else
         {
             cursor_x++;
-            // addch(static_cast<char>(ch));
             text += static_cast<char>(ch);
             editor.display_text(text);
-            // erase();
-            // screen.set_display_text(text);
-            // printw(text.c_str());
-            // refresh();
+            // command_bar.display_text(text);
         }
 
         // printw("size: %d", getmaxx(stdscr));
-        // move(cursor_y, cursor_x);
+        editor.move_cursor(cursor_y, cursor_x);
 
         if (refresh_triggered)
         {
