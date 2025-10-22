@@ -1,5 +1,7 @@
 #include "ncurses_utilities.h"
 
+#include <algorithm>
+
 namespace nc
 {
     void init()
@@ -22,7 +24,7 @@ namespace nc
 
     Window::Window() : Window(0, 0, 0, 0) {};
 
-    Window::Window(int win_height, int win_width, int win_row, int win_col) : height(win_height), width(win_width), row(win_row), col(win_col)
+    Window::Window(int win_height, int win_width, int win_row, int win_col, std::string fill) : height(win_height), width(win_width), row(win_row), col(win_col), fill_pattern(fill)
     {
         window_ptr = newwin(height, width, row, col);
         keypad(window_ptr, true);
@@ -40,10 +42,22 @@ namespace nc
 
     void Window::display_text(std::string text)
     {
+        current_text = text;
+
+        if (fill_pattern != "")
+        {
+            auto newline_count = static_cast<int>(std::ranges::count(current_text, '\n'));
+            int fill_count = std::max(width - newline_count, 0);
+
+            for (int i = 0; i < fill_count; i++)
+            {
+                current_text += fill_pattern + '\n';
+            }
+        }
+
         werase(window_ptr);
         wprintw(window_ptr, text.c_str());
         reload();
-        current_text = text;
     }
 
     int Window::get_input()

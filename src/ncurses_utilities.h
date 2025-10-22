@@ -16,7 +16,7 @@ namespace nc
     {
     public:
         Window();
-        Window(int win_height, int win_width, int win_row, int win_col);
+        Window(int win_height, int win_width, int win_row, int win_col, std::string fill = "");
         ~Window();
 
         // Non-copyable. Windows are unique.
@@ -47,6 +47,7 @@ namespace nc
         int col;
 
         std::string current_text;
+        std::string fill_pattern;
     };
 
     class Layout

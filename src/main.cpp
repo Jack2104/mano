@@ -32,9 +32,6 @@ int main(int argc, char *argv[])
 {
     setup();
 
-    // printw("hello world");
-    // refresh();
-
     int ch;
     bool refresh_triggered = false;
 
@@ -43,12 +40,8 @@ int main(int argc, char *argv[])
     int cursor_y = 0;
 
     nc::Window title_bar(1, nc::cols(), 0, 0);
-    nc::Window editor(nc::rows() - 2, nc::cols(), 1, 0);
+    nc::Window editor(nc::rows() - 2, nc::cols(), 1, 0, "~");
     nc::Window command_bar(1, nc::cols(), nc::rows() - 1, 0);
-
-    // nc::Window title_bar(1, nc::cols(), 0, 0);
-    // nc::Window editor(1, nc::cols(), 1, 0);
-    // nc::Window command_bar(1, nc::cols(), 2, 0);
 
     title_bar.display_text("title bar");
     command_bar.display_text("command bar");
@@ -60,6 +53,13 @@ int main(int argc, char *argv[])
     while (true)
     {
         ch = editor.get_input();
+
+        // switch (ch)
+        // {
+        // case KEY_RESIZE:
+        //     layout.refresh();
+        //     break;
+        // };
 
         if (ch == ERR)
         {
