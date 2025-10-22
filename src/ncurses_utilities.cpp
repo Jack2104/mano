@@ -64,7 +64,7 @@ namespace nc
         width = new_width;
         height = new_height;
 
-        wresize(window_ptr, new_width, new_height);
+        wresize(window_ptr, new_height, new_width);
         reload();
     }
 
@@ -91,9 +91,9 @@ namespace nc
         return height;
     }
 
-    Layout::Layout() : Layout(nc::rows(), nc::cols()) {};
+    Layout::Layout() : max_height(nc::rows()), max_width(nc::cols()), fullscreen(true) {};
 
-    Layout::Layout(int height, int width) : max_height(height), max_width(width) {};
+    Layout::Layout(int height, int width) : max_height(height), max_width(width), fullscreen(false) {};
 
     Layout &Layout::add(Window &window)
     {
@@ -103,13 +103,18 @@ namespace nc
     Layout &Layout::add(Window &window, int height, bool expanding)
     {
         window_details.push_back({window, height, expanding});
-        window.display_text("test: " + std::to_string(height) + ", " + std::to_string(expanding));
 
         return *this;
     }
 
     void Layout::refresh()
     {
+        if (fullscreen)
+        {
+            max_height = nc::rows();
+            max_width = nc::cols();
+        }
+
         /* Calculate the total height taken up by fixed-height (i.e. non-expanding) windows. */
         int total_height = 0;
         int expanding_window_count = 0;

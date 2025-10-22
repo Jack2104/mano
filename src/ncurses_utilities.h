@@ -61,6 +61,8 @@ namespace nc
         void refresh();
 
     protected:
+        bool fullscreen = false;
+
         int max_width;
         int max_height;
 

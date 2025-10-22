@@ -46,9 +46,9 @@ int main(int argc, char *argv[])
     nc::Window editor(nc::rows() - 2, nc::cols(), 1, 0);
     nc::Window command_bar(1, nc::cols(), nc::rows() - 1, 0);
 
-    // nc::Window title_bar;
-    // nc::Window editor;
-    // nc::Window command_bar;
+    // nc::Window title_bar(1, nc::cols(), 0, 0);
+    // nc::Window editor(1, nc::cols(), 1, 0);
+    // nc::Window command_bar(1, nc::cols(), 2, 0);
 
     title_bar.display_text("title bar");
     command_bar.display_text("command bar");
@@ -67,15 +67,24 @@ int main(int argc, char *argv[])
         }
         else if (ch == KEY_RESIZE)
         {
-            title_bar.reload();
+            layout.refresh();
         }
-        else if (ch == KEY_BACKSPACE)
+        else if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b')
         {
-            cursor_x = std::max(cursor_x - 1, 0);
+            if (!text.empty())
+            {
+                text.pop_back();
+
+                if (cursor_x == 0)
+                    cursor_y = std::max(cursor_y - 1, 0);
+
+                cursor_x = std::max(cursor_x - 1, 0);
+                editor.display_text(text);
+            }
         }
         else if (ch == KEY_DOWN)
         {
-            cursor_y = std::min(cursor_y + 1, getmaxy(stdscr));
+            cursor_y = std::min(cursor_y + 1, editor.get_height());
         }
         else if (ch == KEY_UP)
         {
@@ -83,11 +92,14 @@ int main(int argc, char *argv[])
         }
         else if (ch == KEY_LEFT)
         {
+            if (cursor_x == 0)
+                cursor_y = std::max(cursor_y - 1, 0);
+
             cursor_x = std::max(cursor_x - 1, 0);
         }
         else if (ch == KEY_RIGHT)
         {
-            cursor_x = std::min(cursor_x + 1, getmaxx(stdscr));
+            cursor_x = std::min(cursor_x + 1, editor.get_width());
         }
         else if (ch == ctrl('c') || ch == ctrl('x') || ch == ctrl('q'))
         {
@@ -96,21 +108,22 @@ int main(int argc, char *argv[])
         else if (ch == ctrl('g'))
         {
         }
+        else if (ch == '\n')
+        {
+            cursor_y = std::min(cursor_y + 1, editor.get_height());
+            cursor_x = 0;
+
+            text += static_cast<char>(ch);
+            editor.display_text(text);
+        }
         else
         {
             cursor_x++;
             text += static_cast<char>(ch);
             editor.display_text(text);
-            // command_bar.display_text(text);
         }
 
-        // printw("size: %d", getmaxx(stdscr));
         editor.move_cursor(cursor_y, cursor_x);
-
-        if (refresh_triggered)
-        {
-            // refresh();
-        }
     }
 
     cleanup();
