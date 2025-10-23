@@ -57,16 +57,16 @@ namespace nc
         if (fill_pattern != "")
         {
             auto newline_count = static_cast<int>(std::ranges::count(current_text, '\n'));
-            int fill_count = std::max(width - newline_count, 0);
+            int fill_count = std::max(height - newline_count - 1, 0);
 
             for (int i = 0; i < fill_count; i++)
             {
-                current_text += fill_pattern + '\n';
+                current_text += '\n' + fill_pattern;
             }
         }
 
         werase(window_ptr);
-        wprintw(window_ptr, text.c_str());
+        wprintw(window_ptr, current_text.c_str());
         reload();
     }
 

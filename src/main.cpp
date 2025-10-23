@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
         else if (ch == KEY_RESIZE)
         {
             layout.refresh();
+            editor.display_text(text);
         }
         else if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b')
         {
