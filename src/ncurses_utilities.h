@@ -8,6 +8,10 @@ namespace nc
 {
     void init();
 
+    void cleanup();
+
+    int ctrl(char c);
+
     int rows();
 
     int cols();

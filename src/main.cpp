@@ -6,31 +6,9 @@
 
 #include "ncurses_utilities.h"
 
-void setup()
-{
-    initscr();
-    noecho();
-    keypad(stdscr, true);
-    raw();
-}
-
-void cleanup()
-{
-    endwin();
-}
-
-inline int ctrl(char c)
-{
-    return static_cast<int>(c) & (0x1f);
-}
-
-void handle_keyboard_shortcuts(char input)
-{
-}
-
 int main(int argc, char *argv[])
 {
-    setup();
+    nc::init();
 
     int ch;
     bool refresh_triggered = false;
@@ -101,11 +79,11 @@ int main(int argc, char *argv[])
         {
             cursor_x = std::min(cursor_x + 1, editor.get_width());
         }
-        else if (ch == ctrl('c') || ch == ctrl('x') || ch == ctrl('q'))
+        else if (ch == nc::ctrl('c') || ch == nc::ctrl('x') || ch == nc::ctrl('q'))
         {
             break;
         }
-        else if (ch == ctrl('g'))
+        else if (ch == nc::ctrl('g'))
         {
         }
         else if (ch == '\n')
@@ -126,7 +104,7 @@ int main(int argc, char *argv[])
         editor.move_cursor(cursor_y, cursor_x);
     }
 
-    cleanup();
+    nc::cleanup();
     std::exit(0);
 
     // while true
@@ -137,8 +115,6 @@ int main(int argc, char *argv[])
     // - pass to LSP
 
     // save (or update server)
-
-    cleanup();
 }
 
 // Screen: handles printing and cursor

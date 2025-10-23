@@ -12,6 +12,16 @@ namespace nc
         raw();
     }
 
+    void cleanup()
+    {
+        endwin();
+    }
+
+    int ctrl(char c)
+    {
+        return static_cast<int>(c) & (0x1f);
+    }
+
     int rows()
     {
         return LINES;
