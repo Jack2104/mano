@@ -31,8 +31,8 @@ namespace nc
         ~Window();
 
         // Non-copyable. Windows are unique.
-        Window(const Window &window) = delete;
-        Window &operator=(const Window &window) = delete;
+        Window(const Window &window) = default;
+        Window &operator=(const Window &window) = default;
 
         // Allow moves because it tranfers ownership, and window stays unique.
         Window(Window &&window) = default;
