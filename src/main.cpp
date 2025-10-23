@@ -22,7 +22,10 @@ int main(int argc, char *argv[])
     nc::Window command_bar(1, nc::cols(), nc::rows() - 1, 0);
 
     title_bar.display_text("title bar");
+    editor.display_text(text);
     command_bar.display_text("command bar");
+
+    editor.move_cursor(cursor_y, cursor_x);
 
     nc::Layout layout;
     layout.add(title_bar, 1).add(editor).add(command_bar, 1);
@@ -32,24 +35,16 @@ int main(int argc, char *argv[])
     {
         ch = editor.get_input();
 
-        // switch (ch)
-        // {
-        // case KEY_RESIZE:
-        //     layout.refresh();
-        //     break;
-        // };
-
-        if (ch == ERR)
+        switch (ch)
         {
+        case ERR:
             continue;
-        }
-        else if (ch == KEY_RESIZE)
-        {
+        case KEY_RESIZE:
             layout.refresh();
-            editor.display_text(text);
-        }
-        else if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b')
-        {
+            break;
+        case KEY_BACKSPACE:
+        case 127:
+        case '\b':
             if (!text.empty())
             {
                 text.pop_back();
@@ -60,47 +55,106 @@ int main(int argc, char *argv[])
                 cursor_x = std::max(cursor_x - 1, 0);
                 editor.display_text(text);
             }
-        }
-        else if (ch == KEY_DOWN)
-        {
+            break;
+        case KEY_DOWN:
             cursor_y = std::min(cursor_y + 1, editor.get_height());
-        }
-        else if (ch == KEY_UP)
-        {
+            break;
+        case KEY_UP:
             cursor_y = std::max(cursor_y - 1, 0);
-        }
-        else if (ch == KEY_LEFT)
-        {
+            break;
+        case KEY_LEFT:
             if (cursor_x == 0)
                 cursor_y = std::max(cursor_y - 1, 0);
 
             cursor_x = std::max(cursor_x - 1, 0);
-        }
-        else if (ch == KEY_RIGHT)
-        {
-            cursor_x = std::min(cursor_x + 1, editor.get_width());
-        }
-        else if (ch == nc::ctrl('c') || ch == nc::ctrl('x') || ch == nc::ctrl('q'))
-        {
             break;
-        }
-        else if (ch == nc::ctrl('g'))
-        {
-        }
-        else if (ch == '\n')
-        {
+        case KEY_RIGHT:
+            cursor_x = std::min(cursor_x + 1, editor.get_width());
+            break;
+        case nc::CTRL_C:
+        case nc::CTRL_X:
+        case nc::CTRL_Q:
+            nc::cleanup();
+            std::exit(0);
+            break;
+        case nc::CTRL_G:
+            break;
+        case '\n':
             cursor_y = std::min(cursor_y + 1, editor.get_height());
             cursor_x = 0;
 
             text += static_cast<char>(ch);
             editor.display_text(text);
-        }
-        else
-        {
+            break;
+        default:
             cursor_x++;
             text += static_cast<char>(ch);
             editor.display_text(text);
-        }
+            break;
+        };
+
+        // if (ch == ERR)
+        // {
+        //     continue;
+        // }
+        // else if (ch == KEY_RESIZE)
+        // {
+        //     layout.refresh();
+        //     editor.display_text(text);
+        // }
+        // else if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b')
+        // {
+        //     if (!text.empty())
+        //     {
+        //         text.pop_back();
+
+        //         if (cursor_x == 0)
+        //             cursor_y = std::max(cursor_y - 1, 0);
+
+        //         cursor_x = std::max(cursor_x - 1, 0);
+        //         editor.display_text(text);
+        //     }
+        // }
+        // else if (ch == KEY_DOWN)
+        // {
+        //     cursor_y = std::min(cursor_y + 1, editor.get_height());
+        // }
+        // else if (ch == KEY_UP)
+        // {
+        //     cursor_y = std::max(cursor_y - 1, 0);
+        // }
+        // else if (ch == KEY_LEFT)
+        // {
+        //     if (cursor_x == 0)
+        //         cursor_y = std::max(cursor_y - 1, 0);
+
+        //     cursor_x = std::max(cursor_x - 1, 0);
+        // }
+        // else if (ch == KEY_RIGHT)
+        // {
+        //     cursor_x = std::min(cursor_x + 1, editor.get_width());
+        // }
+        // else if (ch == nc::ctrl('c') || ch == nc::ctrl('x') || ch == nc::ctrl('q'))
+        // {
+        //     break;
+        // }
+        // else if (ch == nc::ctrl('g'))
+        // {
+        // }
+        // else if (ch == '\n')
+        // {
+        //     cursor_y = std::min(cursor_y + 1, editor.get_height());
+        //     cursor_x = 0;
+
+        //     text += static_cast<char>(ch);
+        //     editor.display_text(text);
+        // }
+        // else
+        // {
+        //     cursor_x++;
+        //     text += static_cast<char>(ch);
+        //     editor.display_text(text);
+        // }
 
         editor.move_cursor(cursor_y, cursor_x);
     }

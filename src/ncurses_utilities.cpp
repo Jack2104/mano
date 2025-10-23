@@ -22,6 +22,11 @@ namespace nc
         return static_cast<int>(c) & (0x1f);
     }
 
+    bool is_backspace(int c)
+    {
+        return c == KEY_BACKSPACE || c == 127 || c == '\b';
+    }
+
     int rows()
     {
         return LINES;
