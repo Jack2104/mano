@@ -13,6 +13,12 @@ enum class Mode
     CONFIRMATION
 };
 
+struct Cursor
+{
+    int row;
+    int col;
+};
+
 int main(int argc, char *argv[])
 {
     nc::init();
@@ -22,8 +28,10 @@ int main(int argc, char *argv[])
     Mode current_mode = Mode::EDITING;
 
     std::string text = "";
-    int cursor_x = 0;
-    int cursor_y = 0;
+
+    std::shared_ptr<Cursor> editor_cursor = std::make_shared<Cursor>(Cursor{0, 0});
+    std::shared_ptr<Cursor> command_cursor = std::make_shared<Cursor>(Cursor{0, 0});
+    std::shared_ptr<Cursor> current_cursor = editor_cursor;
 
     nc::Window title_bar(1, nc::cols(), 0, 0);
     nc::Window editor(nc::rows() - 2, nc::cols(), 1, 0, "~");
@@ -33,7 +41,7 @@ int main(int argc, char *argv[])
     editor.display_text(text);
     command_bar.display_text("command bar");
 
-    editor.move_cursor(cursor_y, cursor_x);
+    editor.move_cursor(editor_cursor->row, editor_cursor->col);
 
     nc::Layout layout;
     layout.add(title_bar, 1).add(editor).add(command_bar, 1);
@@ -43,11 +51,6 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        if (current_mode == Mode::EDITING)
-            focused_window = editor;
-        else if (current_mode == Mode::GOTO || current_mode == Mode::CONFIRMATION)
-            focused_window = command_bar;
-
         ch = focused_window.get_input();
 
         switch (ch)
@@ -64,27 +67,27 @@ int main(int argc, char *argv[])
             {
                 text.pop_back();
 
-                if (cursor_x == 0)
-                    cursor_y = std::max(cursor_y - 1, 0);
+                if (current_cursor->col == 0)
+                    current_cursor->row = std::max(current_cursor->row - 1, 0);
 
-                cursor_x = std::max(cursor_x - 1, 0);
+                current_cursor->col = std::max(current_cursor->col - 1, 0);
                 focused_window.display_text(text);
             }
             break;
         case KEY_DOWN:
-            cursor_y = std::min(cursor_y + 1, focused_window.get_height());
+            current_cursor->row = std::min(current_cursor->row + 1, focused_window.get_height());
             break;
         case KEY_UP:
-            cursor_y = std::max(cursor_y - 1, 0);
+            current_cursor->row = std::max(current_cursor->row - 1, 0);
             break;
         case KEY_LEFT:
-            if (cursor_x == 0)
-                cursor_y = std::max(cursor_y - 1, 0);
+            if (current_cursor->col == 0)
+                current_cursor->row = std::max(current_cursor->row - 1, 0);
 
-            cursor_x = std::max(cursor_x - 1, 0);
+            current_cursor->col = std::max(current_cursor->col - 1, 0);
             break;
         case KEY_RIGHT:
-            cursor_x = std::min(cursor_x + 1, focused_window.get_width());
+            current_cursor->col = std::min(current_cursor->col + 1, focused_window.get_width());
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
@@ -93,23 +96,38 @@ int main(int argc, char *argv[])
             std::exit(0);
             break;
         case nc::CTRL_G:
-            current_mode = current_mode == Mode::EDITING ? Mode::GOTO : Mode::EDITING;
+            if (current_mode == Mode::GOTO)
+            {
+                current_mode = Mode::EDITING;
+                focused_window = editor;
+                current_cursor = editor_cursor;
+                focused_window.move_cursor(current_cursor->row, current_cursor->col);
+            }
+            else if (current_mode == Mode::EDITING)
+            {
+                current_mode = Mode::GOTO;
+                focused_window = command_bar;
+                current_cursor = command_cursor;
+                current_cursor->col = 0;
+                current_cursor->row = 0;
+                focused_window.move_cursor(0, 0);
+            }
             break;
         case '\n':
-            cursor_y = std::min(cursor_y + 1, focused_window.get_height());
-            cursor_x = 0;
+            current_cursor->row = std::min(current_cursor->row + 1, focused_window.get_height());
+            current_cursor->col = 0;
 
             text += static_cast<char>(ch);
             focused_window.display_text(text);
             break;
         default:
-            cursor_x++;
+            current_cursor->col++;
             text += static_cast<char>(ch);
             focused_window.display_text(text);
             break;
         };
 
-        focused_window.move_cursor(cursor_y, cursor_x);
+        focused_window.move_cursor(current_cursor->row, current_cursor->col);
 
         if (refresh_triggered)
         {
