@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
             }
             break;
         case KEY_DOWN:
-            current_cursor->row = std::min(current_cursor->row + 1, focused_window.get_height());
+            current_cursor->row = std::min(current_cursor->row + 1, focused_window.get_height() - 1);
             break;
         case KEY_UP:
             current_cursor->row = std::max(current_cursor->row - 1, 0);
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
             current_cursor->col = std::max(current_cursor->col - 1, 0);
             break;
         case KEY_RIGHT:
-            current_cursor->col = std::min(current_cursor->col + 1, focused_window.get_width());
+            current_cursor->col = std::min(current_cursor->col + 1, focused_window.get_width() - 1);
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
@@ -153,6 +153,7 @@ int main(int argc, char *argv[])
 }
 
 // TODO:
+//  - fix cursor bug
 //  - add line numbers
 //  - show current cursor position in command bar
 //  - refactor state machine
