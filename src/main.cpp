@@ -41,10 +41,14 @@ int main(int argc, char *argv[])
     editor.display_text(text);
     command_bar.display_text("command bar");
 
+    editor.set_vertical_expansion(true);
     editor.move_cursor(editor_cursor->row, editor_cursor->col);
 
     nc::Layout layout;
-    layout.add(title_bar, 1).add(editor).add(command_bar, 1);
+    layout.add(title_bar, 0, 0)
+        .add(editor, 1, 0)
+        .add(command_bar, 2, 0);
+
     layout.refresh();
 
     nc::Window focused_window = editor;
@@ -147,6 +151,20 @@ int main(int argc, char *argv[])
 
     // save (or update server)
 }
+
+// TODO:
+//  - add line numbers
+//  - show current cursor position in command bar
+//  - refactor state machine
+//      - potentially move handling of arrow keys into separate function
+//      - think about whether alternate modes will handle their own input, or if they'll all
+//        handle input in the main loop s
+//  - add ability for mouse click to move cursor
+//  - work on gap buffer
+//  - add proper cursor movement + scrolling
+//  - add GOTO functionality
+//  - add selection
+//  - add load/save
 
 // Screen: handles printing and cursor
 // e.g. screen.move_cursor(int x, int y, int max_x, int max_y) (will internally ensure x, y don't go beyone screen width/height)

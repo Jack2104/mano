@@ -120,18 +120,25 @@ namespace nc
         return height;
     }
 
+    void Window::set_vertical_expansion(bool value) { expand_vertically = value; }
+    void Window::set_horizontal_expansion(bool value) { expand_horizontally = value; }
+
+    bool Window::expands_vertically() { return expand_vertically; }
+    bool Window::expands_horizontally() { return expand_horizontally; }
+
     Layout::Layout() : max_height(nc::rows()), max_width(nc::cols()), fullscreen(true) {};
 
     Layout::Layout(int height, int width) : max_height(height), max_width(width), fullscreen(false) {};
 
-    Layout &Layout::add(Window &window)
+    Layout &Layout::add(Window &window, int layer_y, int layer_x)
     {
-        return add(window, 0, true);
-    }
+        if (!y_layers.contains(layer_y))
+        {
+            std::map<int, std::reference_wrapper<Window>> window_map;
+            y_layers.insert({layer_y, window_map});
+        }
 
-    Layout &Layout::add(Window &window, int height, bool expanding)
-    {
-        window_details.push_back({window, height, expanding});
+        y_layers[layer_y].insert({layer_x, window});
 
         return *this;
     }
@@ -146,33 +153,65 @@ namespace nc
 
         /* Calculate the total height taken up by fixed-height (i.e. non-expanding) windows. */
         int total_height = 0;
-        int expanding_window_count = 0;
+        int expanding_y_layers = 0;
 
-        for (WindowInfo &win_info : window_details)
+        for (auto y_layer : y_layers)
         {
-            if (!win_info.expanding)
-                total_height += win_info.height;
-            else
-                expanding_window_count++;
-        }
+            // Find the window with the largest height in this layer
+            int max_layer_height = 0;
+            bool layer_has_expanding_item = false;
 
-        /* Divide the remaining height among all expanding windows. */
-        int remaining_height = max_height - total_height;
-        int height_per_expanding_window = remaining_height / expanding_window_count;
-        int curr_row = 0;
-
-        for (WindowInfo &win_info : window_details)
-        {
-            if (win_info.expanding)
+            for (auto x_layer : y_layer.second)
             {
-                win_info.height = height_per_expanding_window;
-                total_height += win_info.height;
+                if (x_layer.second.get().expands_vertically())
+                    layer_has_expanding_item = true;
+                else
+                    max_layer_height = std::max(max_layer_height, x_layer.second.get().get_height());
             }
 
-            win_info.window.reposition(curr_row, 0);
-            win_info.window.resize(win_info.height, win_info.window.get_width());
+            total_height += max_layer_height;
 
-            curr_row += win_info.height;
+            if (layer_has_expanding_item)
+                expanding_y_layers++;
+        }
+
+        /* Divide the remaining height among all expanding y layers. */
+        int height_per_expanding_layer = (max_height - total_height) / expanding_y_layers;
+        int curr_row = 0;
+
+        for (auto y_layer : y_layers)
+        {
+            int max_layer_height = 0;
+
+            /* Calculate the width of any expanding x layers. */
+            int expanding_x_layers = 0;
+            int total_width = 0;
+
+            for (auto x_layer : y_layer.second)
+            {
+                if (x_layer.second.get().expands_horizontally())
+                    expanding_x_layers++;
+                else
+                    total_width += x_layer.second.get().get_width();
+
+                max_layer_height = std::max(max_layer_height, x_layer.second.get().get_height());
+            }
+
+            /* Divide the remaining width among all expanding x layers. */
+            int width_per_expanding_layer = (max_width - total_width) / expanding_x_layers;
+            int curr_col = 0;
+
+            for (auto x_layer : y_layer.second)
+            {
+                x_layer.second.get().reposition(curr_row, curr_col);
+
+                if (x_layer.second.get().expands_vertically())
+                    x_layer.second.get().resize(height_per_expanding_layer, width_per_expanding_layer);
+
+                curr_col += x_layer.second.get().get_width();
+            }
+
+            curr_row += max_layer_height;
         }
     }
 } /* namespace nc */

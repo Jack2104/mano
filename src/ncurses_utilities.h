@@ -2,7 +2,7 @@
 
 #include <ncurses.h>
 #include <string>
-#include <vector>
+#include <map>
 
 namespace nc
 {
@@ -30,11 +30,9 @@ namespace nc
         Window(int win_height, int win_width, int win_row, int win_col, std::string fill = "");
         ~Window();
 
-        // Non-copyable. Windows are unique.
         Window(const Window &window) = default;
         Window &operator=(const Window &window) = default;
 
-        // Allow moves because it tranfers ownership, and window stays unique.
         Window(Window &&window) = default;
         Window &operator=(Window &&window) = default;
 
@@ -49,6 +47,11 @@ namespace nc
         int get_width();
         int get_height();
 
+        void set_vertical_expansion(bool value);
+        void set_horizontal_expansion(bool value);
+        bool expands_vertically();
+        bool expands_horizontally();
+
     protected:
         WINDOW *window_ptr; // Not a unique_ptr because WINDOW* has a special delete function
 
@@ -56,6 +59,8 @@ namespace nc
         int height;
         int row;
         int col;
+        bool expand_vertically;
+        bool expand_horizontally;
 
         std::string current_text;
         std::string fill_pattern;
@@ -68,8 +73,7 @@ namespace nc
         Layout(int height, int width);
 
         /* Returns Layout& to allow chaining, i.e. layout.add(win1).add(win2) */
-        Layout &add(Window &window);
-        Layout &add(Window &window, int height, bool expanding = false);
+        Layout &add(Window &window, int layer_y, int layer_x);
         void refresh();
 
     protected:
@@ -81,13 +85,14 @@ namespace nc
         int total_width;
         int total_height;
 
-        struct WindowInfo
-        {
-            Window &window;
-            int height;
-            bool expanding;
-        };
-
-        std::vector<WindowInfo> window_details;
+        // kinda cursed, should refactor this at some point.
+        // Outer map is keyed on y position (rows) of windows, inner map is keyed on x position
+        // (column) of windows
+        std::map<int, std::map<int, std::reference_wrapper<Window>>> y_layers;
     };
 } /* namespace nc */
+
+// TODO:
+//  - make layout detect if expanding layer has widget that would be taller than the expansion
+//  - make window width/height settable
+//  - change std::ref_wrap in y_layers. having to use .get() everywhere is ugly
