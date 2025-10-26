@@ -19,6 +19,32 @@ struct Cursor
     int col;
 };
 
+void set_line_numbers(int start_num, int end_num, std::shared_ptr<nc::Window> win)
+{
+    int final_num = std::min(end_num, win->get_height());
+
+    /* Quick and easy way to find the maximum number of digits for the line numbers. */
+    int max_digit_count = std::to_string(final_num).length();
+
+    std::string line_numbers = "";
+
+    for (int i = start_num; i <= final_num; i++)
+    {
+        std::string line_num_str = std::to_string(i);
+
+        if (line_num_str.length() < max_digit_count)
+            line_num_str.insert(0, max_digit_count - line_num_str.length(), ' ');
+
+        if (i < final_num)
+            line_num_str += '\n';
+
+        line_numbers += line_num_str;
+    }
+
+    win->resize(win->get_height(), max_digit_count + 1);
+    win->display_text(line_numbers);
+}
+
 int main(int argc, char *argv[])
 {
     nc::init();
@@ -34,12 +60,17 @@ int main(int argc, char *argv[])
     std::shared_ptr<Cursor> current_cursor = editor_cursor;
 
     std::shared_ptr<nc::Window> title_bar = std::make_shared<nc::Window>(1, nc::cols(), 0, 0);
-    std::shared_ptr<nc::Window> editor = std::make_shared<nc::Window>(nc::rows() - 2, nc::cols(), 1, 0, "~");
+    std::shared_ptr<nc::Window> gutter = std::make_shared<nc::Window>(nc::rows() - 2, 5, 1, 0, "~");
+    std::shared_ptr<nc::Window> editor = std::make_shared<nc::Window>(nc::rows() - 2, nc::cols() - 5, 1, 5);
     std::shared_ptr<nc::Window> command_bar = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
 
     title_bar->display_text("title bar");
     editor->display_text(text);
     command_bar->display_text("command bar");
+
+    gutter->set_horizontal_expansion(false);
+    gutter->set_vertical_expansion(true);
+    set_line_numbers(1, 1, gutter);
 
     editor->set_vertical_expansion(true);
     editor->move_cursor(editor_cursor->row, editor_cursor->col);
@@ -47,11 +78,12 @@ int main(int argc, char *argv[])
     // title_bar.display_text(std::to_string(current_cursor->row) + ", " + std::to_string(current_cursor->col) + ": " + std::to_string(editor.get_width()));
 
     nc::Layout layout;
-    layout.add(title_bar, 0, 0).add(editor, 1, 0).add(command_bar, 2, 0);
-
+    layout.add(title_bar, 0, 0).add(gutter, 1, 0).add(editor, 1, 1).add(command_bar, 2, 0);
     layout.refresh();
 
     std::shared_ptr<nc::Window> focused_window = editor;
+
+    int line_count = 1;
 
     while (true)
     {
@@ -72,14 +104,19 @@ int main(int argc, char *argv[])
                 text.pop_back();
 
                 if (current_cursor->col == 0)
+                {
+                    line_count = std::max(line_count - 1, 1);
+                    set_line_numbers(1, line_count, gutter);
+
                     current_cursor->row = std::max(current_cursor->row - 1, 0);
+                }
 
                 current_cursor->col = std::max(current_cursor->col - 1, 0);
                 focused_window->display_text(text);
             }
             break;
         case KEY_DOWN:
-            current_cursor->row = std::min(current_cursor->row + 1, focused_window->get_height() - 1);
+            current_cursor->row = std::min(current_cursor->row + 1, line_count - 1);
             break;
         case KEY_UP:
             current_cursor->row = std::max(current_cursor->row - 1, 0);
@@ -92,7 +129,6 @@ int main(int argc, char *argv[])
             break;
         case KEY_RIGHT:
             current_cursor->col = std::min(current_cursor->col + 1, focused_window->get_width() - 1);
-
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
@@ -119,7 +155,10 @@ int main(int argc, char *argv[])
             }
             break;
         case '\n':
-            current_cursor->row = std::min(current_cursor->row + 1, focused_window->get_height() - 1);
+            line_count++;
+            set_line_numbers(1, line_count, gutter);
+
+            current_cursor->row = std::min(current_cursor->row + 1, line_count - 1);
             current_cursor->col = 0;
 
             text += static_cast<char>(ch);
@@ -137,7 +176,9 @@ int main(int argc, char *argv[])
             layout.refresh();
         }
 
-        // title_bar->display_text(std::to_string(editor.get_height()));
+        if (current_mode == Mode::EDITING)
+            command_bar->display_text(std::to_string(current_cursor->row + 1) + ":" + std::to_string(current_cursor->col + 1));
+
         focused_window->move_cursor(current_cursor->row, current_cursor->col);
     }
 
@@ -155,8 +196,8 @@ int main(int argc, char *argv[])
 }
 
 // TODO:
-//  - fix cursor bug
-//  - add line numbers
+//  + fix cursor bug
+//  + add line numbers
 //  - show current cursor position in command bar
 //  - refactor state machine
 //      - potentially move handling of arrow keys into separate function

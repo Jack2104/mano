@@ -95,7 +95,6 @@ namespace nc
         height = new_height;
 
         wresize(window_ptr, new_height, new_width);
-        // reload();
         display_text(current_text);
     }
 
@@ -159,7 +158,7 @@ namespace nc
 
         for (auto y_layer : y_layers)
         {
-            // Find the window with the largest height in this layer
+            /* Find the window with the largest height in this layer. */
             int max_layer_height = 0;
             bool layer_has_expanding_item = false;
 
@@ -217,12 +216,11 @@ namespace nc
 
                 x_layer.second->reposition(curr_row, curr_col);
                 x_layer.second->resize(new_height, new_width);
-                curr_col += x_layer.second->get_width();
+
+                curr_col += new_width;
             }
 
             curr_row += (max_layer_height == 0 ? height_per_expanding_layer : max_layer_height);
         }
-
-        // y_layers.at(0).at(0)->display_text(std::to_string(remaining_height) + " / " + std::to_string(expanding_y_layers) + " = " + std::to_string(height_per_expanding_layer));
     }
 } /* namespace nc */

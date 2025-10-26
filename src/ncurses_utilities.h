@@ -93,6 +93,6 @@ namespace nc
 } /* namespace nc */
 
 // TODO:
-//  - make layout detect if expanding layer has widget that would be taller than the expansion
+//   make layout detect if expanding layer has widget that would be taller than the expansion
 //  - make window width/height settable
-//  - change std::ref_wrap in y_layers. having to use .get() everywhere is ugly
+//  + change std::ref_wrap in y_layers. having to use .get() everywhere is ugly
