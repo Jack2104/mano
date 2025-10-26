@@ -29,33 +29,33 @@ int main(int argc, char *argv[])
 
     std::string text = "";
 
-    std::shared_ptr<Cursor> editor_cursor = std::make_shared<Cursor>(Cursor{0, 0});
-    std::shared_ptr<Cursor> command_cursor = std::make_shared<Cursor>(Cursor{0, 0});
+    std::shared_ptr<Cursor> editor_cursor = std::make_shared<Cursor>(0, 0);
+    std::shared_ptr<Cursor> command_cursor = std::make_shared<Cursor>(0, 0);
     std::shared_ptr<Cursor> current_cursor = editor_cursor;
 
-    nc::Window title_bar(1, nc::cols(), 0, 0);
-    nc::Window editor(nc::rows() - 2, nc::cols(), 1, 0, "~");
-    nc::Window command_bar(1, nc::cols(), nc::rows() - 1, 0);
+    std::shared_ptr<nc::Window> title_bar = std::make_shared<nc::Window>(1, nc::cols(), 0, 0);
+    std::shared_ptr<nc::Window> editor = std::make_shared<nc::Window>(nc::rows() - 2, nc::cols(), 1, 0, "~");
+    std::shared_ptr<nc::Window> command_bar = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
 
-    title_bar.display_text("title bar");
-    editor.display_text(text);
-    command_bar.display_text("command bar");
+    title_bar->display_text("title bar");
+    editor->display_text(text);
+    command_bar->display_text("command bar");
 
-    editor.set_vertical_expansion(true);
-    editor.move_cursor(editor_cursor->row, editor_cursor->col);
+    editor->set_vertical_expansion(true);
+    editor->move_cursor(editor_cursor->row, editor_cursor->col);
+
+    // title_bar.display_text(std::to_string(current_cursor->row) + ", " + std::to_string(current_cursor->col) + ": " + std::to_string(editor.get_width()));
 
     nc::Layout layout;
-    layout.add(title_bar, 0, 0)
-        .add(editor, 1, 0)
-        .add(command_bar, 2, 0);
+    layout.add(title_bar, 0, 0).add(editor, 1, 0).add(command_bar, 2, 0);
 
     layout.refresh();
 
-    nc::Window focused_window = editor;
+    std::shared_ptr<nc::Window> focused_window = editor;
 
     while (true)
     {
-        ch = focused_window.get_input();
+        ch = focused_window->get_input();
 
         switch (ch)
         {
@@ -75,11 +75,11 @@ int main(int argc, char *argv[])
                     current_cursor->row = std::max(current_cursor->row - 1, 0);
 
                 current_cursor->col = std::max(current_cursor->col - 1, 0);
-                focused_window.display_text(text);
+                focused_window->display_text(text);
             }
             break;
         case KEY_DOWN:
-            current_cursor->row = std::min(current_cursor->row + 1, focused_window.get_height() - 1);
+            current_cursor->row = std::min(current_cursor->row + 1, focused_window->get_height() - 1);
             break;
         case KEY_UP:
             current_cursor->row = std::max(current_cursor->row - 1, 0);
@@ -91,7 +91,8 @@ int main(int argc, char *argv[])
             current_cursor->col = std::max(current_cursor->col - 1, 0);
             break;
         case KEY_RIGHT:
-            current_cursor->col = std::min(current_cursor->col + 1, focused_window.get_width() - 1);
+            current_cursor->col = std::min(current_cursor->col + 1, focused_window->get_width() - 1);
+
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
                 current_mode = Mode::EDITING;
                 focused_window = editor;
                 current_cursor = editor_cursor;
-                focused_window.move_cursor(current_cursor->row, current_cursor->col);
+                focused_window->move_cursor(current_cursor->row, current_cursor->col);
             }
             else if (current_mode == Mode::EDITING)
             {
@@ -114,29 +115,30 @@ int main(int argc, char *argv[])
                 current_cursor = command_cursor;
                 current_cursor->col = 0;
                 current_cursor->row = 0;
-                focused_window.move_cursor(0, 0);
+                focused_window->move_cursor(0, 0);
             }
             break;
         case '\n':
-            current_cursor->row = std::min(current_cursor->row + 1, focused_window.get_height());
+            current_cursor->row = std::min(current_cursor->row + 1, focused_window->get_height() - 1);
             current_cursor->col = 0;
 
             text += static_cast<char>(ch);
-            focused_window.display_text(text);
+            focused_window->display_text(text);
             break;
         default:
             current_cursor->col++;
             text += static_cast<char>(ch);
-            focused_window.display_text(text);
+            focused_window->display_text(text);
             break;
         };
-
-        focused_window.move_cursor(current_cursor->row, current_cursor->col);
 
         if (refresh_triggered)
         {
             layout.refresh();
         }
+
+        // title_bar->display_text(std::to_string(editor.get_height()));
+        focused_window->move_cursor(current_cursor->row, current_cursor->col);
     }
 
     nc::cleanup();
@@ -159,7 +161,7 @@ int main(int argc, char *argv[])
 //  - refactor state machine
 //      - potentially move handling of arrow keys into separate function
 //      - think about whether alternate modes will handle their own input, or if they'll all
-//        handle input in the main loop s
+//        handle input in the main loop
 //  - add ability for mouse click to move cursor
 //  - work on gap buffer
 //  - add proper cursor movement + scrolling

@@ -58,20 +58,21 @@ namespace nc
     void Window::display_text(std::string text)
     {
         current_text = text;
+        std::string filled_text = text;
 
         if (fill_pattern != "")
         {
-            auto newline_count = static_cast<int>(std::ranges::count(current_text, '\n'));
+            auto newline_count = static_cast<int>(std::ranges::count(text, '\n'));
             int fill_count = std::max(height - newline_count - 1, 0);
 
             for (int i = 0; i < fill_count; i++)
             {
-                current_text += '\n' + fill_pattern;
+                filled_text += '\n' + fill_pattern;
             }
         }
 
         werase(window_ptr);
-        wprintw(window_ptr, current_text.c_str());
+        wprintw(window_ptr, filled_text.c_str());
         reload();
     }
 
@@ -94,7 +95,8 @@ namespace nc
         height = new_height;
 
         wresize(window_ptr, new_height, new_width);
-        reload();
+        // reload();
+        display_text(current_text);
     }
 
     void Window::reposition(int new_row, int new_col)
@@ -126,15 +128,15 @@ namespace nc
     bool Window::expands_vertically() { return expand_vertically; }
     bool Window::expands_horizontally() { return expand_horizontally; }
 
-    Layout::Layout() : max_height(nc::rows()), max_width(nc::cols()), fullscreen(true) {};
+    Layout::Layout() : layout_height(nc::rows()), layout_width(nc::cols()), fullscreen(true) {};
 
-    Layout::Layout(int height, int width) : max_height(height), max_width(width), fullscreen(false) {};
+    Layout::Layout(int height, int width) : layout_height(height), layout_width(width), fullscreen(false) {};
 
-    Layout &Layout::add(Window &window, int layer_y, int layer_x)
+    Layout &Layout::add(std::shared_ptr<Window> window, int layer_y, int layer_x)
     {
         if (!y_layers.contains(layer_y))
         {
-            std::map<int, std::reference_wrapper<Window>> window_map;
+            std::map<int, std::shared_ptr<Window>> window_map;
             y_layers.insert({layer_y, window_map});
         }
 
@@ -147,8 +149,8 @@ namespace nc
     {
         if (fullscreen)
         {
-            max_height = nc::rows();
-            max_width = nc::cols();
+            layout_height = nc::rows();
+            layout_width = nc::cols();
         }
 
         /* Calculate the total height taken up by fixed-height (i.e. non-expanding) windows. */
@@ -163,20 +165,21 @@ namespace nc
 
             for (auto x_layer : y_layer.second)
             {
-                if (x_layer.second.get().expands_vertically())
+                if (x_layer.second->expands_vertically())
                     layer_has_expanding_item = true;
                 else
-                    max_layer_height = std::max(max_layer_height, x_layer.second.get().get_height());
+                    max_layer_height = std::max(max_layer_height, x_layer.second->get_height());
             }
 
             total_height += max_layer_height;
 
-            if (layer_has_expanding_item)
+            if (max_layer_height == 0 && layer_has_expanding_item)
                 expanding_y_layers++;
         }
 
         /* Divide the remaining height among all expanding y layers. */
-        int height_per_expanding_layer = (max_height - total_height) / expanding_y_layers;
+        int remaining_height = layout_height - total_height;
+        int height_per_expanding_layer = expanding_y_layers > 0 ? remaining_height / expanding_y_layers : 0;
         int curr_row = 0;
 
         for (auto y_layer : y_layers)
@@ -189,29 +192,37 @@ namespace nc
 
             for (auto x_layer : y_layer.second)
             {
-                if (x_layer.second.get().expands_horizontally())
+                if (x_layer.second->expands_horizontally())
                     expanding_x_layers++;
                 else
-                    total_width += x_layer.second.get().get_width();
+                    total_width += x_layer.second->get_width();
 
-                max_layer_height = std::max(max_layer_height, x_layer.second.get().get_height());
+                if (!x_layer.second->expands_vertically())
+                    max_layer_height = std::max(max_layer_height, x_layer.second->get_height());
             }
 
             /* Divide the remaining width among all expanding x layers. */
-            int width_per_expanding_layer = (max_width - total_width) / expanding_x_layers;
+            int remaining_width = layout_width - total_width;
+            int width_per_expanding_layer = expanding_x_layers > 0 ? remaining_width / expanding_x_layers : 0;
             int curr_col = 0;
 
             for (auto x_layer : y_layer.second)
             {
-                x_layer.second.get().reposition(curr_row, curr_col);
+                int new_height = x_layer.second->get_height();
 
-                if (x_layer.second.get().expands_vertically())
-                    x_layer.second.get().resize(height_per_expanding_layer, width_per_expanding_layer);
+                if (x_layer.second->expands_vertically())
+                    new_height = max_layer_height == 0 ? height_per_expanding_layer : max_layer_height;
 
-                curr_col += x_layer.second.get().get_width();
+                int new_width = x_layer.second->expands_horizontally() ? width_per_expanding_layer : x_layer.second->get_width();
+
+                x_layer.second->reposition(curr_row, curr_col);
+                x_layer.second->resize(new_height, new_width);
+                curr_col += x_layer.second->get_width();
             }
 
-            curr_row += max_layer_height;
+            curr_row += (max_layer_height == 0 ? height_per_expanding_layer : max_layer_height);
         }
+
+        // y_layers.at(0).at(0)->display_text(std::to_string(remaining_height) + " / " + std::to_string(expanding_y_layers) + " = " + std::to_string(height_per_expanding_layer));
     }
 } /* namespace nc */

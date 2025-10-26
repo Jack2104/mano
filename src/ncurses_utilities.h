@@ -59,8 +59,8 @@ namespace nc
         int height;
         int row;
         int col;
-        bool expand_vertically;
-        bool expand_horizontally;
+        bool expand_vertically = false;
+        bool expand_horizontally = true;
 
         std::string current_text;
         std::string fill_pattern;
@@ -73,14 +73,14 @@ namespace nc
         Layout(int height, int width);
 
         /* Returns Layout& to allow chaining, i.e. layout.add(win1).add(win2) */
-        Layout &add(Window &window, int layer_y, int layer_x);
+        Layout &add(std::shared_ptr<Window> window, int layer_y, int layer_x);
         void refresh();
 
     protected:
         bool fullscreen = false;
 
-        int max_width;
-        int max_height;
+        int layout_width;
+        int layout_height;
 
         int total_width;
         int total_height;
@@ -88,7 +88,7 @@ namespace nc
         // kinda cursed, should refactor this at some point.
         // Outer map is keyed on y position (rows) of windows, inner map is keyed on x position
         // (column) of windows
-        std::map<int, std::map<int, std::reference_wrapper<Window>>> y_layers;
+        std::map<int, std::map<int, std::shared_ptr<Window>>> y_layers;
     };
 } /* namespace nc */
 
