@@ -5,18 +5,13 @@
 #include <string>
 
 #include "ncurses_utilities.h"
+#include "TextBuffer.h"
 
 enum class Mode
 {
     EDITING,
     GOTO,
     CONFIRMATION
-};
-
-struct Cursor
-{
-    int row;
-    int col;
 };
 
 void set_line_numbers(int start_num, int end_num, std::shared_ptr<nc::Window> win)
@@ -74,8 +69,6 @@ int main(int argc, char *argv[])
 
     editor->set_vertical_expansion(true);
     editor->move_cursor(editor_cursor->row, editor_cursor->col);
-
-    // title_bar.display_text(std::to_string(current_cursor->row) + ", " + std::to_string(current_cursor->col) + ": " + std::to_string(editor.get_width()));
 
     nc::Layout layout;
     layout.add(title_bar, 0, 0).add(gutter, 1, 0).add(editor, 1, 1).add(command_bar, 2, 0);
@@ -198,7 +191,7 @@ int main(int argc, char *argv[])
 // TODO:
 //  + fix cursor bug
 //  + add line numbers
-//  - show current cursor position in command bar
+//  + show current cursor position in command bar
 //  - refactor state machine
 //      - potentially move handling of arrow keys into separate function
 //      - think about whether alternate modes will handle their own input, or if they'll all
