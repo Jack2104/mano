@@ -16,8 +16,9 @@ public:
 
     void set_cursor_pos(Cursor cursor);
     void insert(char c);
-    void remove();
+    void pop();
     std::string get_text();
+    bool empty();
 
 private:
     std::vector<char> buffer;

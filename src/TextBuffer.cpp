@@ -4,7 +4,7 @@ TextBuffer::TextBuffer()
 {
     gap_len = GAP_SIZE;
     buffer_len = gap_len;
-    buffer.reserve(buffer_len);
+    buffer.resize(buffer_len);
 
     cursor_pos = 0;
     current_line = 0;
@@ -44,11 +44,11 @@ void TextBuffer::insert(char c)
     }
 }
 
-void TextBuffer::remove()
+void TextBuffer::pop()
 {
     move_gap();
 
-    if (cursor_pos == 0)
+    if (empty())
         return;
 
     cursor_pos--;
@@ -73,7 +73,20 @@ void TextBuffer::remove()
 
 std::string TextBuffer::get_text()
 {
-    return std::string(buffer.begin(), buffer.begin() + gap_pos) + std::string(buffer.begin() + gap_pos + gap_len, buffer.end());
+    auto gap_start = buffer.begin() + gap_pos;
+    auto gap_end = buffer.begin() + gap_pos + gap_len;
+
+    /* Check if there's no text after the gap. */
+    if (gap_end == buffer.end())
+        return std::string(buffer.begin(), gap_start);
+    // return std::to_string(buffer.size()) + ": " + std::to_string(gap_pos) + ", " + std::to_string(gap_len);
+
+    return std::string(buffer.begin(), gap_start) + std::string(gap_end, buffer.end());
+}
+
+bool TextBuffer::empty()
+{
+    return cursor_pos == 0;
 }
 
 void TextBuffer::update_line_length(int line_num, int delta)
@@ -113,3 +126,6 @@ void TextBuffer::move_gap()
 
 // 0  1  2  3  4
 // h  e  l  l  0
+
+// 0 1 2 3 4
+// a

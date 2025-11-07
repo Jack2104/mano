@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
     Mode current_mode = Mode::EDITING;
 
     std::string text = "";
+    TextBuffer document_text = TextBuffer();
 
     std::shared_ptr<Cursor> editor_cursor = std::make_shared<Cursor>(0, 0);
     std::shared_ptr<Cursor> command_cursor = std::make_shared<Cursor>(0, 0);
@@ -92,6 +93,13 @@ int main(int argc, char *argv[])
         case KEY_BACKSPACE:
         case 127:
         case '\b':
+            document_text.pop();
+
+            if (!document_text.empty())
+            {
+                focused_window->display_text(document_text.get_text());
+            }
+
             if (!text.empty())
             {
                 text.pop_back();
@@ -105,7 +113,7 @@ int main(int argc, char *argv[])
                 }
 
                 current_cursor->col = std::max(current_cursor->col - 1, 0);
-                focused_window->display_text(text);
+                // focused_window->display_text(document_text.get_text());
             }
             break;
         case KEY_DOWN:
@@ -155,12 +163,17 @@ int main(int argc, char *argv[])
             current_cursor->col = 0;
 
             text += static_cast<char>(ch);
-            focused_window->display_text(text);
+            document_text.insert(static_cast<char>(ch));
+
+            focused_window->display_text(document_text.get_text());
             break;
         default:
             current_cursor->col++;
+
             text += static_cast<char>(ch);
-            focused_window->display_text(text);
+            document_text.insert(static_cast<char>(ch));
+
+            focused_window->display_text(document_text.get_text());
             break;
         };
 
