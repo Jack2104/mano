@@ -31,7 +31,7 @@ void set_line_numbers(int start_num, int end_num, std::shared_ptr<nc::Window> wi
             line_num_str.insert(0, max_digit_count - line_num_str.length(), ' ');
 
         if (i < final_num)
-            line_num_str += '\n';
+            line_num_str += "\n";
 
         line_numbers += line_num_str;
     }
@@ -48,7 +48,6 @@ int main(int argc, char *argv[])
     bool refresh_triggered = false;
     Mode current_mode = Mode::EDITING;
 
-    std::string text = "";
     TextBuffer document_text = TextBuffer();
 
     std::shared_ptr<Cursor> editor_cursor = std::make_shared<Cursor>(0, 0);
@@ -61,7 +60,7 @@ int main(int argc, char *argv[])
     std::shared_ptr<nc::Window> command_bar = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
 
     title_bar->display_text("title bar");
-    editor->display_text(text);
+    editor->display_text(document_text.get_text());
     command_bar->display_text("command bar");
 
     gutter->set_horizontal_expansion(false);
@@ -95,41 +94,36 @@ int main(int argc, char *argv[])
         case '\b':
             document_text.pop();
 
-            if (!document_text.empty())
+            if (current_cursor->col == 0)
             {
-                focused_window->display_text(document_text.get_text());
+                line_count = std::max(line_count - 1, 1);
+                set_line_numbers(1, line_count, gutter);
+
+                current_cursor->row = std::max(current_cursor->row - 1, 0);
             }
 
-            if (!text.empty())
-            {
-                text.pop_back();
-
-                if (current_cursor->col == 0)
-                {
-                    line_count = std::max(line_count - 1, 1);
-                    set_line_numbers(1, line_count, gutter);
-
-                    current_cursor->row = std::max(current_cursor->row - 1, 0);
-                }
-
-                current_cursor->col = std::max(current_cursor->col - 1, 0);
-                // focused_window->display_text(document_text.get_text());
-            }
+            current_cursor->col = std::max(current_cursor->col - 1, 0);
+            focused_window->display_text(document_text.get_text());
+            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case KEY_DOWN:
             current_cursor->row = std::min(current_cursor->row + 1, line_count - 1);
+            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case KEY_UP:
             current_cursor->row = std::max(current_cursor->row - 1, 0);
+            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case KEY_LEFT:
             if (current_cursor->col == 0)
                 current_cursor->row = std::max(current_cursor->row - 1, 0);
 
             current_cursor->col = std::max(current_cursor->col - 1, 0);
+            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case KEY_RIGHT:
             current_cursor->col = std::min(current_cursor->col + 1, focused_window->get_width() - 1);
+            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
@@ -162,17 +156,13 @@ int main(int argc, char *argv[])
             current_cursor->row = std::min(current_cursor->row + 1, line_count - 1);
             current_cursor->col = 0;
 
-            text += static_cast<char>(ch);
             document_text.insert(static_cast<char>(ch));
-
             focused_window->display_text(document_text.get_text());
             break;
         default:
             current_cursor->col++;
 
-            text += static_cast<char>(ch);
             document_text.insert(static_cast<char>(ch));
-
             focused_window->display_text(document_text.get_text());
             break;
         };
@@ -185,6 +175,7 @@ int main(int argc, char *argv[])
         if (current_mode == Mode::EDITING)
             command_bar->display_text(std::to_string(current_cursor->row + 1) + ":" + std::to_string(current_cursor->col + 1));
 
+        focused_window->display_text(document_text.get_text());
         focused_window->move_cursor(current_cursor->row, current_cursor->col);
     }
 
