@@ -124,7 +124,6 @@ void TextBuffer::move_gap()
         /* If the cursor is beyond the gap, then its position has the gap
         factored into it. Therefore if the gap is removed, we need to adjust
         the cursor's position to account for the (now removed) gap. */
-        // TODO: remove this, use text space position for everything instead
         if (buffer_space_cursor_pos > gap_pos)
             buffer_space_cursor_pos -= gap_len;
 
