@@ -39,6 +39,10 @@ void TextBuffer::insert(char c)
 
     if (c == '\n')
     {
+        // TODO: make newlines count towards line length!!!
+
+        // int relative_line_index = to_text_space(buffer_space_cursor_pos) - line_data[current_line].start_index;
+
         LineInfo new_line;
         new_line.start_index = to_text_space(buffer_space_cursor_pos);
 
