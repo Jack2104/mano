@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "TextMetadata.h"
+
 struct Cursor
 {
     int row;
@@ -32,16 +34,8 @@ private:
     int buffer_space_cursor_pos;
     int current_line;
 
-    // TODO: look into using a fenwick tree for this
-    struct LineInfo
-    {
-        int start_index;
-        int length;
-    };
+    TextMetadata metadata = TextMetadata();
 
-    std::vector<LineInfo> line_data;
-
-    void update_line_length(int line_num, int delta);
     void move_gap();
     bool gap_at_end();
 

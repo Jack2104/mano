@@ -11,19 +11,28 @@ TextBuffer::TextBuffer()
     gap_pos = 0;
     current_line = 0;
 
-    line_data.push_back(LineInfo{0, 0});
-
     debug();
 }
 
 void TextBuffer::set_cursor_pos(int row, int col)
 {
-    int max_line = static_cast<int>(line_data.size()) - 1;
+    int max_line = metadata.line_count() - 1; // Lines are zero-indexed, so subtract 1
     current_line = std::min(row, max_line);
 
-    LineInfo line = line_data[current_line];
-    int offset = std::min(col, line.length);
-    buffer_space_cursor_pos = to_buffer_space(line.start_index + std::max(0, offset));
+    /* Lines without a newline (i.e. the final line) allow the cursor to move one index beyond the
+    final text index, to allow for inserting at the end of the line. */
+    int selectable_indices = metadata.line_length(current_line);
+
+    /* Lines with a newline make the cursor stop at the newline (since it's invalid to insert
+    characters after a newline on a single line), and so subtract one from the line length to
+    account for the newline. */
+    if (!metadata.line_is_final(current_line))
+        selectable_indices--;
+
+    int offset = std::min(col, selectable_indices);
+
+    int text_space_cursor_pos = metadata.line_start_index(current_line) + std::max(0, offset);
+    buffer_space_cursor_pos = to_buffer_space(text_space_cursor_pos);
 
     debug();
 }
@@ -37,29 +46,16 @@ void TextBuffer::insert(char c)
     gap_pos++;
     gap_len--;
 
+    metadata.update_line_length(current_line, 1);
+
+    /* Split the line into two (or create a new one) on a newline. */
     if (c == '\n')
     {
-        // TODO: make newlines count towards line length!!!
+        int text_space_cursor_pos = to_text_space(buffer_space_cursor_pos);
+        int relative_index = text_space_cursor_pos - metadata.line_start_index(current_line);
 
-        // int relative_line_index = to_text_space(buffer_space_cursor_pos) - line_data[current_line].start_index;
-
-        LineInfo new_line;
-        new_line.start_index = to_text_space(buffer_space_cursor_pos);
-
-        int line_end = line_data[current_line].start_index + line_data[current_line].length + 1;
-        new_line.length = line_end - new_line.start_index;
-        line_data[current_line].length -= new_line.length;
-
+        metadata.split_line(current_line, relative_index);
         current_line++;
-        line_data.insert(line_data.begin() + current_line, new_line);
-
-        std::for_each(line_data.begin() + current_line + 1, line_data.end(), [](LineInfo &l)
-                      { l.start_index++; });
-    }
-    else
-    {
-        /* Update all existing line info. */
-        update_line_length(current_line, 1);
     }
 
     debug();
@@ -76,26 +72,14 @@ void TextBuffer::pop()
     gap_pos--;
     gap_len++;
 
-    /* Update all existing line info. */
-
-    /* If crossing a line boundary, combine the line info into one. */
+    /* If crossing a line boundary, combine the lines into one. */
     if (buffer[buffer_space_cursor_pos] == '\n')
     {
-        line_data[current_line - 1].length += line_data[current_line].length;
-        line_data.erase(line_data.begin() + current_line);
+        metadata.merge_line(current_line);
         current_line--;
+    }
 
-        std::for_each(line_data.begin() + current_line + 1, line_data.end(), [](LineInfo &l)
-                      { l.start_index--; });
-    }
-    else
-    {
-        // TODO: we dont actually need to update line start indexes on deletion as
-        // the deletions just create a larger gap. we do however need to update them
-        // when the gap grows (i.e. only on insertions) since the start indexes will
-        // have moved forwards
-        update_line_length(current_line, -1);
-    }
+    metadata.update_line_length(current_line, -1);
 
     debug();
 }
@@ -128,16 +112,6 @@ bool TextBuffer::empty()
     return buffer.size() == gap_len;
 }
 
-void TextBuffer::update_line_length(int line_num, int delta)
-{
-    line_data[line_num].length += delta;
-
-    std::for_each(line_data.begin() + line_num + 1, line_data.end(), [delta](LineInfo &l)
-                  { l.start_index += delta; });
-
-    debug();
-}
-
 void TextBuffer::move_gap()
 {
     /* Move cursor on write. */
@@ -150,6 +124,7 @@ void TextBuffer::move_gap()
         /* If the cursor is beyond the gap, then its position has the gap
         factored into it. Therefore if the gap is removed, we need to adjust
         the cursor's position to account for the (now removed) gap. */
+        // TODO: remove this, use text space position for everything instead
         if (buffer_space_cursor_pos > gap_pos)
             buffer_space_cursor_pos -= gap_len;
 
@@ -198,7 +173,8 @@ void TextBuffer::debug()
     std::ofstream debug_file("debug.txt", std::ofstream::out | std::ofstream::trunc);
 
     debug_file << "= Cursor = " << std::endl;
-    debug_file << "cursor pos = " << buffer_space_cursor_pos << ", cursor line = " << current_line << std::endl;
+    debug_file << "buffer space cursor pos = " << buffer_space_cursor_pos << ", cursor line = " << current_line << std::endl;
+    debug_file << "text space cursor pos = " << to_text_space(buffer_space_cursor_pos) << std::endl;
     debug_file << "at: " << buffer[buffer_space_cursor_pos] << std::endl;
 
     debug_file << "\n= Gap = " << std::endl;
@@ -229,10 +205,7 @@ void TextBuffer::debug()
 
     debug_file << "\n= Line Info =" << std::endl;
 
-    for (auto &line : line_data)
-    {
-        debug_file << "start index = " << line.start_index << ", length = " << line.length << std::endl;
-    }
+    debug_file << metadata;
 }
 
 // 0 1 2 3 4 (end)
