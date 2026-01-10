@@ -65,7 +65,7 @@ void TextBuffer::pop()
 {
     move_gap();
 
-    if (buffer_space_cursor_pos == 0 || empty())
+    if (buffer_space_cursor_pos == 0 || is_empty())
         return;
 
     buffer_space_cursor_pos--;
@@ -86,7 +86,7 @@ void TextBuffer::pop()
 
 std::string TextBuffer::get_text()
 {
-    if (empty())
+    if (is_empty())
         return "";
 
     auto gap_start = buffer.begin() + gap_pos;
@@ -99,17 +99,24 @@ std::string TextBuffer::get_text()
     return std::string(buffer.begin(), gap_start) + std::string(gap_end, buffer.end());
 }
 
-std::string TextBuffer::get_debug_text()
-{
-    auto gap_end = buffer.begin() + gap_pos + gap_len;
-    bool gap_is_end = gap_end == buffer.end();
-
-    return std::to_string(buffer.size()) + ": cursor = " + std::to_string(buffer_space_cursor_pos) + ", gap start = " + std::to_string(gap_pos) + ", gap len = " + std::to_string(gap_len) + ", gap end = " + std::to_string(gap_pos + gap_len) + ", gap end == buffer.end() = " + std::to_string(gap_is_end) + ", buffer size = " + std::to_string(buffer.size());
-}
-
-bool TextBuffer::empty()
+bool TextBuffer::is_empty()
 {
     return buffer.size() == gap_len;
+}
+
+int TextBuffer::get_line_count()
+{
+    return metadata.line_count();
+}
+
+int TextBuffer::get_line_length(int line_num)
+{
+    return metadata.line_length(line_num);
+}
+
+bool TextBuffer::is_final_line(int line_num)
+{
+    return metadata.line_is_final(line_num);
 }
 
 void TextBuffer::move_gap()

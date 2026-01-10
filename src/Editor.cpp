@@ -1,8 +1,15 @@
 #include "Editor.h"
 
+#include <limits.h>
+#include <fstream>
+
 Editor::Editor()
 {
     nc::init();
+
+    document_text = std::make_shared<TextBuffer>();
+    command_text = std::make_shared<TextBuffer>();
+    current_text = document_text;
 
     editor_cursor = std::make_shared<Cursor>(0, 0);
     command_cursor = std::make_shared<Cursor>(0, 0);
@@ -14,7 +21,7 @@ Editor::Editor()
     command_bar = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
 
     title_bar->display_text("title bar");
-    editor->display_text(document_text.get_text());
+    editor->display_text(document_text->get_text());
     command_bar->display_text("command bar");
 
     gutter->set_horizontal_expansion(false);
@@ -61,62 +68,114 @@ void Editor::set_line_numbers(int start_num, int end_num)
     gutter->display_text(line_numbers);
 }
 
+void Editor::update_cursor(int key)
+{
+    int current_row = current_cursor->row;
+    int current_col = current_cursor->col;
+
+    int new_row = current_row;
+    int new_col = current_col;
+
+    /* Calculate new row and column values, without regard for any contraints. */
+    switch (key)
+    {
+    case KEY_DOWN:
+        new_row = current_row + 1;
+        break;
+    case KEY_UP:
+        new_row = current_row - 1;
+        break;
+    case KEY_LEFT:
+        if (current_col <= 0)
+        {
+            new_row = current_row - 1;
+            new_col = std::numeric_limits<int>::max(); // Will be constrained below
+        }
+        else
+        {
+            new_col = current_col - 1;
+        }
+
+        break;
+    case KEY_RIGHT:
+        if (current_col >= (current_text->get_line_length(current_row) - get_line_end_offset(current_row)) && !current_text->is_final_line(current_row))
+        {
+            new_row = current_row + 1;
+            new_col = 0;
+        }
+        else
+        {
+            new_col = current_col + 1;
+        }
+
+        break;
+    };
+
+    /* Enforce contstraints to ensure the cursor doesn't go beyond the line/document length. */
+    int max_row = std::max(0, current_text->get_line_count() - 1);
+
+    if (new_row > max_row)
+        new_row = max_row;
+    else if (new_row < 0)
+        new_row = 0;
+
+    int max_col = std::max(0, current_text->get_line_length(new_row) - get_line_end_offset(new_row));
+
+    if (new_col > max_col)
+        new_col = max_col;
+    else if (new_col < 0)
+        new_col = 0;
+
+    current_cursor->row = new_row;
+    current_cursor->col = new_col;
+}
+
+int Editor::get_line_end_offset(int line_num)
+{
+    /* Avoids counting the newline as part of line length, aside from the final
+    line (as the final line does not have a newline). */
+    return current_text->is_final_line(line_num) ? 0 : 1;
+}
+
 void Editor::start_state_machine()
 {
-    bool refresh_triggered = false;
-
     while (true)
     {
-        int ch = focused_window->get_input();
+        /* Conceptually a character, but int is used (ncurses does this, so we do too). */
+        int input = focused_window->get_input();
 
-        switch (ch)
+        switch (input)
         {
         case ERR:
             continue;
         case KEY_RESIZE:
-            refresh_triggered = true;
+            layout.refresh();
             break;
         case KEY_BACKSPACE:
         case 127:
         case '\b':
-            document_text.pop();
+            current_text->pop();
 
+            /* Only update line numbers if the line count has changed. */
             if (current_cursor->col == 0)
-            {
-                line_count = std::max(line_count - 1, 1);
-                set_line_numbers(1, line_count);
+                set_line_numbers(1, current_text->get_line_count());
 
-                current_cursor->row = std::max(current_cursor->row - 1, 0);
-            }
+            update_cursor(KEY_LEFT);
 
-            current_cursor->col = std::max(current_cursor->col - 1, 0);
-            focused_window->display_text(document_text.get_text());
-            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
+            focused_window->display_text(current_text->get_text());
+            current_text->set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case KEY_DOWN:
-            current_cursor->row = std::min(current_cursor->row + 1, line_count - 1);
-            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
-            break;
         case KEY_UP:
-            current_cursor->row = std::max(current_cursor->row - 1, 0);
-            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
-            break;
         case KEY_LEFT:
-            if (current_cursor->col == 0)
-                current_cursor->row = std::max(current_cursor->row - 1, 0);
-
-            current_cursor->col = std::max(current_cursor->col - 1, 0);
-            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
-            break;
         case KEY_RIGHT:
-            current_cursor->col = std::min(current_cursor->col + 1, focused_window->get_width() - 1);
-            document_text.set_cursor_pos(current_cursor->row, current_cursor->col);
+            update_cursor(input);
+            current_text->set_cursor_pos(current_cursor->row, current_cursor->col);
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
         case nc::CTRL_Q:
-            nc::cleanup();
-            std::exit(0);
+            return;
             break;
         case nc::CTRL_G:
             if (current_mode == Mode::GOTO)
@@ -136,33 +195,49 @@ void Editor::start_state_machine()
                 focused_window->move_cursor(0, 0);
             }
             break;
+        case '\r':
+            break;
         case '\n':
-            line_count++;
-            set_line_numbers(1, line_count);
+            if (current_mode == Mode::GOTO)
+            {
+                // parse command
+                break;
+            }
 
-            current_cursor->row = std::min(current_cursor->row + 1, line_count - 1);
+            current_text->insert(static_cast<char>(input));
+
+            set_line_numbers(1, current_text->get_line_count());
+
+            update_cursor(KEY_DOWN);
             current_cursor->col = 0;
 
-            document_text.insert(static_cast<char>(ch));
-            focused_window->display_text(document_text.get_text());
+            focused_window->display_text(current_text->get_text());
             break;
         default:
-            current_cursor->col++;
+            // current_cursor->col++;
 
-            document_text.insert(static_cast<char>(ch));
-            focused_window->display_text(document_text.get_text());
+            current_text->insert(static_cast<char>(input));
+            update_cursor(KEY_RIGHT);
+            focused_window->display_text(current_text->get_text());
             break;
         };
-
-        if (refresh_triggered)
-        {
-            layout.refresh();
-        }
 
         if (current_mode == Mode::EDITING)
             command_bar->display_text(std::to_string(current_cursor->row + 1) + ":" + std::to_string(current_cursor->col + 1));
 
-        focused_window->display_text(document_text.get_text());
+        focused_window->display_text(current_text->get_text());
         focused_window->move_cursor(current_cursor->row, current_cursor->col);
     }
 }
+
+// To handle cursor/view window: simply keep track of how many lines above/below cursor position to
+// show. Put constraints on these numbers (max is window height, min is zero). Then subtract/add to
+// these values when cursor is moved.
+// Then, for example, if the cursor is at the bottom it will stay visually at the bottom since the
+// lines above/below will be constrained and so won't change. If the cursor is then moved up, the
+// lines above will be subtraced from and lines below added to, which won't be constrained and so
+// the cursor will visually move upwards.
+//
+// Can render certain lines by using start indexes in TextMetadata
+
+// TODO: add separate enums for Mode (editing, command) and CommandMode (goto, saving, etc.)

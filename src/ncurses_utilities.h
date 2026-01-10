@@ -96,3 +96,4 @@ namespace nc
 //   make layout detect if expanding layer has widget that would be taller than the expansion
 //  - make window width/height settable
 //  + change std::ref_wrap in y_layers. having to use .get() everywhere is ugly
+//  - add constexpr variables for all used ncurses keys. also make them characters

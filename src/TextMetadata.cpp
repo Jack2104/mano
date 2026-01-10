@@ -64,8 +64,8 @@ int TextMetadata::line_start_index(int line_num)
 
 int TextMetadata::line_length(int line_num)
 {
-    if (line_num >= line_data.size())
-        return -1;
+    if (line_num < 0 || line_num >= line_data.size())
+        return 0;
 
     return line_data[line_num].length;
 }

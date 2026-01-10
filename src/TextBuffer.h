@@ -17,11 +17,15 @@ public:
     TextBuffer();
 
     void set_cursor_pos(int row, int col);
+
     void insert(char c);
     void pop();
+
     std::string get_text();
-    std::string get_debug_text();
-    bool empty();
+    bool is_empty();
+    int get_line_count();
+    int get_line_length(int line_num);
+    bool is_final_line(int line_num);
 
 private:
     std::vector<char> buffer;
@@ -48,3 +52,16 @@ private:
 
     void debug();
 };
+
+// TODO:
+//   - refactor TextBuffer to have no sense of "cursor position". Make it only appear as a random-access
+//     text buffer. Move TextMetadata out of TextBuffer and use it alongside TextBuffer in Editor class,
+//     so that Editor can see line information (such as line count, etc.)
+//   - Then make "TextEdit" class that combines a Window and TextBuffer, to replace the editor and
+//     command bar. This will take an optional "default string" (used for the command bar). May have
+//     to also take a lambda to have dynamic default strings.
+//       - Would need some internal layout, and
+//         have it and Window inherit from a "Widget" interface. This interface would have functions
+//         to set width/height. For TextEdit, this would modify the internal Layout. External Layout
+//         would then indirectly set this.
+//     - maybe include line numbers in this?
