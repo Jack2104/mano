@@ -4,12 +4,7 @@
 
 TextBuffer::TextBuffer()
 {
-    gap_len = GAP_SIZE;
-    buffer.resize(gap_len);
-
-    buffer_space_cursor_pos = 0;
-    gap_pos = 0;
-    current_line = 0;
+    clear();
 
     debug();
 }
@@ -82,6 +77,18 @@ void TextBuffer::pop()
     metadata.update_line_length(current_line, -1);
 
     debug();
+}
+
+void TextBuffer::clear()
+{
+    metadata.clear();
+
+    gap_len = GAP_SIZE;
+    buffer.resize(gap_len);
+
+    buffer_space_cursor_pos = 0;
+    gap_pos = 0;
+    current_line = 0;
 }
 
 std::string TextBuffer::get_text()

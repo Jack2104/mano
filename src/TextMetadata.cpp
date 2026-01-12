@@ -54,6 +54,11 @@ void TextMetadata::update_indexes(int start_line_num, int delta)
                   { l.start_index += delta; });
 }
 
+void TextMetadata::clear()
+{
+    line_data.clear();
+}
+
 int TextMetadata::line_start_index(int line_num)
 {
     if (line_num >= line_data.size())

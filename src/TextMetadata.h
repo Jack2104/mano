@@ -31,6 +31,8 @@ public:
     start indexes consistent when adding or removing lines. */
     void update_indexes(int start_line_num, int delta);
 
+    void clear();
+
     /* Getters. */
     int line_start_index(int line_num);
     int line_length(int line_num);

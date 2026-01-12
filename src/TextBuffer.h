@@ -20,6 +20,7 @@ public:
 
     void insert(char c);
     void pop();
+    void clear();
 
     std::string get_text();
     bool is_empty();
