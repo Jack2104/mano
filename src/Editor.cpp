@@ -86,7 +86,7 @@ void Editor::update_cursor(int key)
         new_row = current_row - 1;
         break;
     case KEY_LEFT:
-        if (current_col <= 0)
+        if (current_col <= 0 && current_row > 0)
         {
             new_row = current_row - 1;
             new_col = std::numeric_limits<int>::max(); // Will be constrained below
@@ -154,13 +154,13 @@ void Editor::start_state_machine()
         case KEY_BACKSPACE:
         case 127:
         case '\b':
-            current_text->pop();
-
             /* Only update line numbers if the line count has changed. */
-            if (current_cursor->col == 0)
-                set_line_numbers(1, current_text->get_line_count());
+            // if (current_cursor->col == 0)
+            //     set_line_numbers(1, current_text->get_line_count());
 
             update_cursor(KEY_LEFT);
+            current_text->pop();
+            set_line_numbers(1, current_text->get_line_count());
 
             focused_window->display_text(current_text->get_text());
             current_text->set_cursor_pos(current_cursor->row, current_cursor->col);
@@ -183,6 +183,7 @@ void Editor::start_state_machine()
                 current_mode = Mode::EDITING;
                 focused_window = editor;
                 current_cursor = editor_cursor;
+                current_text = document_text;
                 focused_window->move_cursor(current_cursor->row, current_cursor->col);
             }
             else if (current_mode == Mode::EDITING)
@@ -190,6 +191,7 @@ void Editor::start_state_machine()
                 current_mode = Mode::GOTO;
                 focused_window = command_bar;
                 current_cursor = command_cursor;
+                current_text = command_text;
                 current_cursor->col = 0;
                 current_cursor->row = 0;
                 focused_window->move_cursor(0, 0);
@@ -214,8 +216,6 @@ void Editor::start_state_machine()
             focused_window->display_text(current_text->get_text());
             break;
         default:
-            // current_cursor->col++;
-
             current_text->insert(static_cast<char>(input));
             update_cursor(KEY_RIGHT);
             focused_window->display_text(current_text->get_text());
