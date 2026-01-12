@@ -181,6 +181,8 @@ void Editor::start_state_machine()
             if (current_mode == Mode::GOTO)
             {
                 current_mode = Mode::EDITING;
+                current_text->clear();
+
                 focused_window = editor;
                 current_cursor = editor_cursor;
                 current_text = document_text;

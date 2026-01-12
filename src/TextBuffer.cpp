@@ -4,7 +4,12 @@
 
 TextBuffer::TextBuffer()
 {
-    clear();
+    gap_len = GAP_SIZE;
+    buffer.resize(gap_len);
+
+    buffer_space_cursor_pos = 0;
+    gap_pos = 0;
+    current_line = 0;
 
     debug();
 }
