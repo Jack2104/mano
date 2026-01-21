@@ -42,6 +42,30 @@ Editor::~Editor()
     nc::cleanup();
 }
 
+void Editor::set_cursor_pos(const Cursor &new_cursor)
+{
+    int new_row = new_cursor.row;
+    int new_col = new_cursor.col;
+
+    /* Enforce contstraints to ensure the cursor doesn't go beyond the line/document length. */
+    int max_row = std::max(0, current_text->get_line_count() - 1);
+
+    if (new_row > max_row)
+        new_row = max_row;
+    else if (new_row < 0)
+        new_row = 0;
+
+    int max_col = std::max(0, current_text->get_line_length(new_row) - get_line_end_offset(new_row));
+
+    if (new_col > max_col)
+        new_col = max_col;
+    else if (new_col < 0)
+        new_col = 0;
+
+    current_cursor->row = new_row;
+    current_cursor->col = new_col;
+}
+
 void Editor::set_line_numbers(int start_num, int end_num)
 {
     int final_num = std::min(end_num, gutter->get_height());
@@ -111,23 +135,7 @@ void Editor::update_cursor(int key)
         break;
     };
 
-    /* Enforce contstraints to ensure the cursor doesn't go beyond the line/document length. */
-    int max_row = std::max(0, current_text->get_line_count() - 1);
-
-    if (new_row > max_row)
-        new_row = max_row;
-    else if (new_row < 0)
-        new_row = 0;
-
-    int max_col = std::max(0, current_text->get_line_length(new_row) - get_line_end_offset(new_row));
-
-    if (new_col > max_col)
-        new_col = max_col;
-    else if (new_col < 0)
-        new_col = 0;
-
-    current_cursor->row = new_row;
-    current_cursor->col = new_col;
+    set_cursor_pos(Cursor{new_row, new_col});
 }
 
 int Editor::get_line_end_offset(int line_num)
@@ -135,6 +143,17 @@ int Editor::get_line_end_offset(int line_num)
     /* Avoids counting the newline as part of line length, aside from the final
     line (as the final line does not have a newline). */
     return current_text->is_final_line(line_num) ? 0 : 1;
+}
+
+void Editor::change_state(Mode new_state)
+{
+    current_mode = Mode::EDITING;
+    current_text->clear();
+
+    focused_window = editor;
+    current_cursor = editor_cursor;
+    current_text = document_text;
+    focused_window->move_cursor(current_cursor->row, current_cursor->col);
 }
 
 void Editor::start_state_machine()
@@ -204,13 +223,28 @@ void Editor::start_state_machine()
         case '\n':
             if (current_mode == Mode::GOTO)
             {
-                // parse command
+                current_mode = Mode::EDITING;
+                current_cursor = editor_cursor;
+                focused_window = editor;
+
+                auto [row_opt, col_opt] = parse_goto_command(current_text->get_text());
+                Cursor new_cursor;
+                new_cursor.row = row_opt ? *row_opt : current_cursor->row;
+                new_cursor.col = col_opt ? *col_opt : current_cursor->col;
+
+                set_cursor_pos(new_cursor);
+                focused_window->move_cursor(current_cursor->row, current_cursor->col);
+
+                current_text->clear();
+                current_text = document_text;
+
                 break;
             }
 
             current_text->insert(static_cast<char>(input));
 
-            set_line_numbers(1, current_text->get_line_count());
+            if (current_mode == Mode::EDITING)
+                set_line_numbers(1, current_text->get_line_count());
 
             update_cursor(KEY_DOWN);
             current_cursor->col = 0;
@@ -230,6 +264,38 @@ void Editor::start_state_machine()
         focused_window->display_text(current_text->get_text());
         focused_window->move_cursor(current_cursor->row, current_cursor->col);
     }
+}
+
+std::pair<std::optional<int>, std::optional<int>> Editor::parse_goto_command(std::string command)
+{
+    std::string::size_type delim_pos = command.find(':');
+
+    std::optional<int> row;
+
+    try
+    {
+        row = std::stoi(command.substr(0, delim_pos));
+    }
+    catch (std::invalid_argument)
+    {
+        row = std::nullopt;
+    }
+
+    if (delim_pos == std::string::npos)
+        return std::make_pair(row, std::nullopt);
+
+    std::optional<int> col;
+
+    try
+    {
+        col = std::stoi(command.substr(delim_pos, command.length()));
+    }
+    catch (std::invalid_argument)
+    {
+        col = std::nullopt;
+    }
+
+    return std::make_pair(row, col);
 }
 
 // To handle cursor/view window: simply keep track of how many lines above/below cursor position to

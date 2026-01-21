@@ -3,6 +3,8 @@
 #include "ncurses_utilities.h"
 #include "TextBuffer.h"
 
+#include <optional>
+
 enum class Mode
 {
     EDITING,
@@ -37,7 +39,14 @@ private:
 
     nc::Layout layout = nc::Layout();
 
+    char command_delim = ':';
+
+    void set_cursor_pos(const Cursor &new_cursor);
+    void change_state(Mode new_state);
+
     void set_line_numbers(int start_num, int end_num);
     void update_cursor(int key);
     int get_line_end_offset(int line_num);
+
+    std::pair<std::optional<int>, std::optional<int>> parse_goto_command(std::string command);
 };
