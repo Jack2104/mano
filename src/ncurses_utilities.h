@@ -4,6 +4,12 @@
 #include <string>
 #include <map>
 
+struct Cursor
+{
+    int row;
+    int col;
+};
+
 namespace nc
 {
     static constexpr int CTRL_G = static_cast<int>('g') & (0x1f);
@@ -36,6 +42,7 @@ namespace nc
         Window(Window &&window) = default;
         Window &operator=(Window &&window) = default;
 
+        void move_cursor(const Cursor &cursor);
         void move_cursor(int row, int col);
         void display_text(std::string text);
         int get_input();

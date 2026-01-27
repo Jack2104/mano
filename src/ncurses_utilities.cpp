@@ -50,6 +50,11 @@ namespace nc
         delwin(window_ptr);
     }
 
+    void Window::move_cursor(const Cursor &cursor)
+    {
+        move_cursor(cursor.row, cursor.col);
+    }
+
     void Window::move_cursor(int row, int col)
     {
         wmove(window_ptr, row, col);

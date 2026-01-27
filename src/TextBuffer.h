@@ -5,12 +5,6 @@
 
 #include "TextMetadata.h"
 
-struct Cursor
-{
-    int row;
-    int col;
-};
-
 class TextBuffer
 {
 public:

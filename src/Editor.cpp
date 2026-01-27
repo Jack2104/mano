@@ -8,33 +8,36 @@ Editor::Editor()
     nc::init();
 
     document_text = std::make_shared<TextBuffer>();
-    command_text = std::make_shared<TextBuffer>();
-    current_text = document_text;
+    cmd_bar_text = std::make_shared<TextBuffer>();
 
-    editor_cursor = std::make_shared<Cursor>(0, 0);
-    command_cursor = std::make_shared<Cursor>(0, 0);
-    current_cursor = editor_cursor;
+    document_cursor = std::make_shared<Cursor>(0, 0);
+    cmd_bar_cursor = std::make_shared<Cursor>(0, 0);
 
     title_bar = std::make_shared<nc::Window>(1, nc::cols(), 0, 0);
     gutter = std::make_shared<nc::Window>(nc::rows() - 2, 5, 1, 0, "~");
-    editor = std::make_shared<nc::Window>(nc::rows() - 2, nc::cols() - 5, 1, 5);
-    command_bar = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
+    document_win = std::make_shared<nc::Window>(nc::rows() - 2, nc::cols() - 5, 1, 5);
+    cmd_bar_win = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
 
     title_bar->display_text("title bar");
-    editor->display_text(document_text->get_text());
-    command_bar->display_text("command bar");
+    document_win->display_text(document_text->get_text());
+    cmd_bar_win->display_text("command bar");
 
     gutter->set_horizontal_expansion(false);
     gutter->set_vertical_expansion(true);
     set_line_numbers(1, 1);
 
-    editor->set_vertical_expansion(true);
-    editor->move_cursor(editor_cursor->row, editor_cursor->col);
+    document_win->set_vertical_expansion(true);
+    document_win->move_cursor(*document_cursor);
 
-    layout.add(title_bar, 0, 0).add(gutter, 1, 0).add(editor, 1, 1).add(command_bar, 2, 0);
+    layout.add(title_bar, 0, 0).add(gutter, 1, 0).add(document_win, 1, 1).add(cmd_bar_win, 2, 0);
     layout.refresh();
 
-    focused_window = editor;
+    document_ctx = Context(document_text, document_cursor, document_win);
+    cmd_bar_ctx = Context(cmd_bar_text, cmd_bar_cursor, cmd_bar_win);
+    current_ctx = document_ctx;
+
+    contexts.insert({Mode::EDITING, document_ctx});
+    contexts.insert({Mode::GOTO, cmd_bar_ctx});
 }
 
 Editor::~Editor()
@@ -48,22 +51,24 @@ void Editor::set_cursor_pos(const Cursor &new_cursor)
     int new_col = new_cursor.col;
 
     /* Enforce contstraints to ensure the cursor doesn't go beyond the line/document length. */
-    int max_row = std::max(0, current_text->get_line_count() - 1);
+    int max_row = std::max(0, current_ctx.text->get_line_count() - 1);
 
     if (new_row > max_row)
         new_row = max_row;
     else if (new_row < 0)
         new_row = 0;
 
-    int max_col = std::max(0, current_text->get_line_length(new_row) - get_line_end_offset(new_row));
+    int max_col = std::max(0, current_ctx.text->get_line_length(new_row) - get_line_end_offset(new_row));
 
     if (new_col > max_col)
         new_col = max_col;
     else if (new_col < 0)
         new_col = 0;
 
-    current_cursor->row = new_row;
-    current_cursor->col = new_col;
+    current_ctx.cursor->row = new_row;
+    current_ctx.cursor->col = new_col;
+
+    current_ctx.window->move_cursor(*current_ctx.cursor);
 }
 
 void Editor::set_line_numbers(int start_num, int end_num)
@@ -94,8 +99,8 @@ void Editor::set_line_numbers(int start_num, int end_num)
 
 void Editor::update_cursor(int key)
 {
-    int current_row = current_cursor->row;
-    int current_col = current_cursor->col;
+    int current_row = current_ctx.cursor->row;
+    int current_col = current_ctx.cursor->col;
 
     int new_row = current_row;
     int new_col = current_col;
@@ -122,7 +127,8 @@ void Editor::update_cursor(int key)
 
         break;
     case KEY_RIGHT:
-        if (current_col >= (current_text->get_line_length(current_row) - get_line_end_offset(current_row)) && !current_text->is_final_line(current_row))
+        if (current_col >= (current_ctx.text->get_line_length(current_row) - get_line_end_offset(current_row)) &&
+            !current_ctx.text->is_final_line(current_row))
         {
             new_row = current_row + 1;
             new_col = 0;
@@ -142,18 +148,14 @@ int Editor::get_line_end_offset(int line_num)
 {
     /* Avoids counting the newline as part of line length, aside from the final
     line (as the final line does not have a newline). */
-    return current_text->is_final_line(line_num) ? 0 : 1;
+    return current_ctx.text->is_final_line(line_num) ? 0 : 1;
 }
 
 void Editor::change_state(Mode new_state)
 {
-    current_mode = Mode::EDITING;
-    current_text->clear();
-
-    focused_window = editor;
-    current_cursor = editor_cursor;
-    current_text = document_text;
-    focused_window->move_cursor(current_cursor->row, current_cursor->col);
+    current_state = new_state;
+    current_ctx = contexts[new_state];
+    current_ctx.window->move_cursor(*current_ctx.cursor);
 }
 
 void Editor::start_state_machine()
@@ -161,7 +163,7 @@ void Editor::start_state_machine()
     while (true)
     {
         /* Conceptually a character, but int is used (ncurses does this, so we do too). */
-        int input = focused_window->get_input();
+        int input = current_ctx.window->get_input();
 
         switch (input)
         {
@@ -178,18 +180,18 @@ void Editor::start_state_machine()
             //     set_line_numbers(1, current_text->get_line_count());
 
             update_cursor(KEY_LEFT);
-            current_text->pop();
-            set_line_numbers(1, current_text->get_line_count());
+            current_ctx.text->pop();
+            set_line_numbers(1, current_ctx.text->get_line_count());
 
-            focused_window->display_text(current_text->get_text());
-            current_text->set_cursor_pos(current_cursor->row, current_cursor->col);
+            current_ctx.window->display_text(current_ctx.text->get_text());
+            current_ctx.text->set_cursor_pos(current_ctx.cursor->row, current_ctx.cursor->col);
             break;
         case KEY_DOWN:
         case KEY_UP:
         case KEY_LEFT:
         case KEY_RIGHT:
             update_cursor(input);
-            current_text->set_cursor_pos(current_cursor->row, current_cursor->col);
+            current_ctx.text->set_cursor_pos(current_ctx.cursor->row, current_ctx.cursor->col);
             break;
         case nc::CTRL_C:
         case nc::CTRL_X:
@@ -197,72 +199,57 @@ void Editor::start_state_machine()
             return;
             break;
         case nc::CTRL_G:
-            if (current_mode == Mode::GOTO)
+            if (current_state == Mode::GOTO)
             {
-                current_mode = Mode::EDITING;
-                current_text->clear();
-
-                focused_window = editor;
-                current_cursor = editor_cursor;
-                current_text = document_text;
-                focused_window->move_cursor(current_cursor->row, current_cursor->col);
+                current_ctx.text->clear();
+                change_state(Mode::EDITING);
             }
-            else if (current_mode == Mode::EDITING)
+            else if (current_state == Mode::EDITING)
             {
-                current_mode = Mode::GOTO;
-                focused_window = command_bar;
-                current_cursor = command_cursor;
-                current_text = command_text;
-                current_cursor->col = 0;
-                current_cursor->row = 0;
-                focused_window->move_cursor(0, 0);
+                change_state(Mode::GOTO);
+                set_cursor_pos(Cursor{0, 0});
             }
             break;
         case '\r':
             break;
         case '\n':
-            if (current_mode == Mode::GOTO)
+            if (current_state == Mode::GOTO)
             {
-                current_mode = Mode::EDITING;
-                current_cursor = editor_cursor;
-                focused_window = editor;
+                auto [row_opt, col_opt] = parse_goto_command(current_ctx.text->get_text());
 
-                auto [row_opt, col_opt] = parse_goto_command(current_text->get_text());
                 Cursor new_cursor;
-                new_cursor.row = row_opt ? *row_opt : current_cursor->row;
-                new_cursor.col = col_opt ? *col_opt : current_cursor->col;
+                new_cursor.row = row_opt ? *row_opt : current_ctx.cursor->row;
+                new_cursor.col = col_opt ? *col_opt : current_ctx.cursor->col;
 
+                current_ctx.text->clear();
+                change_state(Mode::EDITING);
                 set_cursor_pos(new_cursor);
-                focused_window->move_cursor(current_cursor->row, current_cursor->col);
-
-                current_text->clear();
-                current_text = document_text;
 
                 break;
             }
 
-            current_text->insert(static_cast<char>(input));
+            current_ctx.text->insert(static_cast<char>(input));
 
-            if (current_mode == Mode::EDITING)
-                set_line_numbers(1, current_text->get_line_count());
+            if (current_state == Mode::EDITING)
+                set_line_numbers(1, current_ctx.text->get_line_count());
 
             update_cursor(KEY_DOWN);
-            current_cursor->col = 0;
+            current_ctx.cursor->col = 0;
 
-            focused_window->display_text(current_text->get_text());
+            current_ctx.window->display_text(current_ctx.text->get_text());
             break;
         default:
-            current_text->insert(static_cast<char>(input));
+            current_ctx.text->insert(static_cast<char>(input));
             update_cursor(KEY_RIGHT);
-            focused_window->display_text(current_text->get_text());
+            current_ctx.window->display_text(current_ctx.text->get_text());
             break;
         };
 
-        if (current_mode == Mode::EDITING)
-            command_bar->display_text(std::to_string(current_cursor->row + 1) + ":" + std::to_string(current_cursor->col + 1));
+        if (current_state == Mode::EDITING)
+            cmd_bar_win->display_text(std::to_string(current_ctx.cursor->row + 1) + ":" + std::to_string(current_ctx.cursor->col + 1));
 
-        focused_window->display_text(current_text->get_text());
-        focused_window->move_cursor(current_cursor->row, current_cursor->col);
+        current_ctx.window->display_text(current_ctx.text->get_text());
+        current_ctx.window->move_cursor(*current_ctx.cursor);
     }
 }
 
@@ -274,7 +261,7 @@ std::pair<std::optional<int>, std::optional<int>> Editor::parse_goto_command(std
 
     try
     {
-        row = std::stoi(command.substr(0, delim_pos));
+        row = std::stoi(command.substr(0, delim_pos)) - 1;
     }
     catch (std::invalid_argument)
     {
@@ -288,7 +275,7 @@ std::pair<std::optional<int>, std::optional<int>> Editor::parse_goto_command(std
 
     try
     {
-        col = std::stoi(command.substr(delim_pos, command.length()));
+        col = std::stoi(command.substr(delim_pos, command.length())) - 1;
     }
     catch (std::invalid_argument)
     {
