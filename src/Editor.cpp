@@ -125,6 +125,8 @@ void Editor::update_cursor(int key)
             new_col = current_col - 1;
         }
 
+        prev_column = new_col;
+
         break;
     case KEY_RIGHT:
         if (current_col >= (current_ctx.text->get_line_length(current_row) - get_line_end_offset(current_row)) &&
@@ -138,10 +140,12 @@ void Editor::update_cursor(int key)
             new_col = current_col + 1;
         }
 
+        prev_column = new_col;
+
         break;
     };
 
-    set_cursor_pos(Cursor{new_row, new_col});
+    set_cursor_pos(Cursor{new_row, std::max(new_col, prev_column)});
 }
 
 int Editor::get_line_end_offset(int line_num)

@@ -43,6 +43,8 @@ private:
     std::shared_ptr<Cursor> document_cursor;
     std::shared_ptr<Cursor> cmd_bar_cursor;
 
+    int prev_column = 0;
+
     std::shared_ptr<nc::Window> title_bar;
     std::shared_ptr<nc::Window> gutter;
     std::shared_ptr<nc::Window> document_win;
