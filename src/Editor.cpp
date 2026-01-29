@@ -123,9 +123,8 @@ void Editor::update_cursor(int key)
         else
         {
             new_col = current_col - 1;
+            prev_column = new_col;
         }
-
-        prev_column = new_col;
 
         break;
     case KEY_RIGHT:
