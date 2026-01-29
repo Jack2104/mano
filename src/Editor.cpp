@@ -275,7 +275,7 @@ std::pair<std::optional<int>, std::optional<int>> Editor::parse_goto_command(std
 
     try
     {
-        col = std::stoi(command.substr(delim_pos, command.length())) - 1;
+        col = std::stoi(command.substr(delim_pos + 1, command.length())) - 1;
     }
     catch (std::invalid_argument)
     {
