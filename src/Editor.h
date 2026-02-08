@@ -60,6 +60,8 @@ private:
 
     char command_delim = ':';
 
+    bool saved = true;
+
     void set_cursor_pos(const Cursor &new_cursor);
     void change_state(Mode new_state);
 

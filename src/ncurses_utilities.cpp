@@ -10,6 +10,7 @@ namespace nc
         noecho();
         keypad(stdscr, true);
         raw();
+        // mousemask(ALL_MOUSE_EVENTS, NULL);
     }
 
     void cleanup()

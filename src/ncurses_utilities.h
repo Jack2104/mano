@@ -16,6 +16,7 @@ namespace nc
     static constexpr int CTRL_C = static_cast<int>('c') & (0x1f);
     static constexpr int CTRL_X = static_cast<int>('x') & (0x1f);
     static constexpr int CTRL_Q = static_cast<int>('q') & (0x1f);
+    static constexpr int CTRL_S = static_cast<int>('s') & (0x1f);
 
     void init();
 

@@ -38,6 +38,7 @@ Editor::Editor()
 
     contexts.insert({Mode::EDITING, document_ctx});
     contexts.insert({Mode::GOTO, cmd_bar_ctx});
+    contexts.insert({Mode::CONFIRMATION, cmd_bar_ctx});
 }
 
 Editor::~Editor()
@@ -123,8 +124,9 @@ void Editor::update_cursor(int key)
         else
         {
             new_col = current_col - 1;
-            prev_column = new_col;
         }
+
+        prev_column = new_col;
 
         break;
     case KEY_RIGHT:
@@ -156,6 +158,9 @@ int Editor::get_line_end_offset(int line_num)
 
 void Editor::change_state(Mode new_state)
 {
+    if (!contexts.contains(new_state))
+        return;
+
     current_state = new_state;
     current_ctx = contexts[new_state];
     current_ctx.window->move_cursor(*current_ctx.cursor);
@@ -167,6 +172,7 @@ void Editor::start_state_machine()
     {
         /* Conceptually a character, but int is used (ncurses does this, so we do too). */
         int input = current_ctx.window->get_input();
+        MEVENT mouse_event;
 
         switch (input)
         {
@@ -174,6 +180,20 @@ void Editor::start_state_machine()
             continue;
         case KEY_RESIZE:
             layout.refresh();
+            break;
+        case KEY_MOUSE:
+            if (getmouse(&mouse_event) != OK)
+                continue;
+
+            if (mouse_event.bstate & BUTTON1_CLICKED)
+            {
+                Cursor new_pos;
+                new_pos.row = mouse_event.y;
+                new_pos.col = mouse_event.x;
+                set_cursor_pos(new_pos);
+                continue;
+            }
+
             break;
         case KEY_BACKSPACE:
         case 127:
@@ -188,6 +208,7 @@ void Editor::start_state_machine()
 
             current_ctx.window->display_text(current_ctx.text->get_text());
             current_ctx.text->set_cursor_pos(current_ctx.cursor->row, current_ctx.cursor->col);
+            saved = false;
             break;
         case KEY_DOWN:
         case KEY_UP:
@@ -199,7 +220,14 @@ void Editor::start_state_machine()
         case nc::CTRL_C:
         case nc::CTRL_X:
         case nc::CTRL_Q:
-            return;
+            if (saved)
+                return;
+
+            change_state(Mode::CONFIRMATION);
+            cmd_bar_ctx.window->display_text("Exit without saving?");
+            break;
+        case nc::CTRL_S:
+            saved = true;
             break;
         case nc::CTRL_G:
             if (current_state == Mode::GOTO)
@@ -212,8 +240,6 @@ void Editor::start_state_machine()
                 change_state(Mode::GOTO);
                 set_cursor_pos(Cursor{0, 0});
             }
-            break;
-        case '\r':
             break;
         case '\n':
             if (current_state == Mode::GOTO)
@@ -230,6 +256,11 @@ void Editor::start_state_machine()
 
                 break;
             }
+            else if (current_state == Mode::CONFIRMATION)
+            {
+                saved = true;
+                return;
+            }
 
             current_ctx.text->insert(static_cast<char>(input));
 
@@ -240,11 +271,13 @@ void Editor::start_state_machine()
             current_ctx.cursor->col = 0;
 
             current_ctx.window->display_text(current_ctx.text->get_text());
+            saved = false;
             break;
         default:
             current_ctx.text->insert(static_cast<char>(input));
             update_cursor(KEY_RIGHT);
             current_ctx.window->display_text(current_ctx.text->get_text());
+            saved = false;
             break;
         };
 
