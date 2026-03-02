@@ -1,6 +1,8 @@
 #pragma once
 
-#include <ncpp/ncurses_utilities.h>
+#include <ncpp/ncpp.h>
+#include <ncpp/Window.h>
+#include <ncpp/Layout.h>
 #include <text_buffer/TextBuffer.h>
 
 #include <optional>
@@ -10,7 +12,7 @@ enum class Mode
 {
     EDITING,
     GOTO,
-    CONFIRMATION
+    SAVING
 };
 
 class Context
@@ -19,11 +21,11 @@ public:
     Context() : text(nullptr), cursor(nullptr), window(nullptr) {};
     Context(std::shared_ptr<TextBuffer> text,
             std::shared_ptr<Cursor> cursor,
-            std::shared_ptr<nc::Window> window) : text(text), cursor(cursor), window(window) {};
+            std::shared_ptr<ncpp::Window> window) : text(text), cursor(cursor), window(window) {};
 
     std::shared_ptr<TextBuffer> text;
     std::shared_ptr<Cursor> cursor;
-    std::shared_ptr<nc::Window> window;
+    std::shared_ptr<ncpp::Window> window;
 };
 
 class Editor
@@ -45,12 +47,12 @@ private:
 
     int prev_column = 0;
 
-    std::shared_ptr<nc::Window> title_bar;
-    std::shared_ptr<nc::Window> gutter;
-    std::shared_ptr<nc::Window> document_win;
-    std::shared_ptr<nc::Window> cmd_bar_win;
+    std::shared_ptr<ncpp::Window> title_bar;
+    std::shared_ptr<ncpp::Window> gutter;
+    std::shared_ptr<ncpp::Window> document_win;
+    std::shared_ptr<ncpp::Window> cmd_bar_win;
 
-    nc::Layout layout = nc::Layout();
+    ncpp::Layout layout = ncpp::Layout();
 
     Context document_ctx;
     Context cmd_bar_ctx;

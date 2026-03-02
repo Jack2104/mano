@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include <ncpp/ncurses_utilities.h>
-#include <text_buffer/TextBuffer.h>
 #include "Editor.h"
 
 int main(int argc, char *argv[])

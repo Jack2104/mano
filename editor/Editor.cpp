@@ -5,7 +5,7 @@
 
 Editor::Editor()
 {
-    nc::init();
+    ncpp::init();
 
     document_text = std::make_shared<TextBuffer>();
     cmd_bar_text = std::make_shared<TextBuffer>();
@@ -13,10 +13,10 @@ Editor::Editor()
     document_cursor = std::make_shared<Cursor>(0, 0);
     cmd_bar_cursor = std::make_shared<Cursor>(0, 0);
 
-    title_bar = std::make_shared<nc::Window>(1, nc::cols(), 0, 0);
-    gutter = std::make_shared<nc::Window>(nc::rows() - 2, 5, 1, 0, "~");
-    document_win = std::make_shared<nc::Window>(nc::rows() - 2, nc::cols() - 5, 1, 5);
-    cmd_bar_win = std::make_shared<nc::Window>(1, nc::cols(), nc::rows() - 1, 0);
+    title_bar = std::make_shared<ncpp::Window>(1, ncpp::cols(), 0, 0);
+    gutter = std::make_shared<ncpp::Window>(ncpp::rows() - 2, 5, 1, 0, "~");
+    document_win = std::make_shared<ncpp::Window>(ncpp::rows() - 2, ncpp::cols() - 5, 1, 5);
+    cmd_bar_win = std::make_shared<ncpp::Window>(1, ncpp::cols(), ncpp::rows() - 1, 0);
 
     title_bar->display_text("title bar");
     document_win->display_text(document_text->get_text());
@@ -38,12 +38,12 @@ Editor::Editor()
 
     contexts.insert({Mode::EDITING, document_ctx});
     contexts.insert({Mode::GOTO, cmd_bar_ctx});
-    contexts.insert({Mode::CONFIRMATION, cmd_bar_ctx});
+    contexts.insert({Mode::SAVING, cmd_bar_ctx});
 }
 
 Editor::~Editor()
 {
-    nc::cleanup();
+    ncpp::cleanup();
 }
 
 void Editor::set_cursor_pos(const Cursor &new_cursor)
@@ -217,19 +217,18 @@ void Editor::start_state_machine()
             update_cursor(input);
             current_ctx.text->set_cursor_pos(current_ctx.cursor->row, current_ctx.cursor->col);
             break;
-        case nc::CTRL_C:
-        case nc::CTRL_X:
-        case nc::CTRL_Q:
-            if (saved)
+        case ncpp::CTRL_C:
+        case ncpp::CTRL_X:
+        case ncpp::CTRL_Q:
+            if (saved || current_state == Mode::SAVING)
                 return;
 
-            change_state(Mode::CONFIRMATION);
-            cmd_bar_ctx.window->display_text("Exit without saving?");
+            change_state(Mode::SAVING);
             break;
-        case nc::CTRL_S:
+        case ncpp::CTRL_S:
             saved = true;
             break;
-        case nc::CTRL_G:
+        case ncpp::CTRL_G:
             if (current_state == Mode::GOTO)
             {
                 current_ctx.text->clear();
@@ -256,7 +255,7 @@ void Editor::start_state_machine()
 
                 break;
             }
-            else if (current_state == Mode::CONFIRMATION)
+            else if (current_state == Mode::SAVING)
             {
                 saved = true;
                 return;

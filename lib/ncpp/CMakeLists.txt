@@ -2,7 +2,9 @@ project(ncpp)
 
 add_library(
     ${PROJECT_NAME}
-    src/ncurses_utilities.cpp
+    src/ncpp.cpp
+    src/Window.cpp
+    src/Layout.cpp
 )
 add_library(lib::ncpp ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
