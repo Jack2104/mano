@@ -1,4 +1,4 @@
-#include "ncurses_utilities.h"
+#include "ncpp/ncurses_utilities.h"
 
 #include <algorithm>
 

@@ -1,4 +1,6 @@
-#include "TextMetadata.h"
+#include "text_buffer/TextMetadata.h"
+
+#include <algorithm>
 
 TextMetadata::TextMetadata()
 {

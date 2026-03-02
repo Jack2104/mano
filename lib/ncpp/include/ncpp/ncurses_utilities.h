@@ -3,6 +3,7 @@
 #include <ncurses.h>
 #include <string>
 #include <map>
+#include <memory>
 
 struct Cursor
 {

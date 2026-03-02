@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ncurses_utilities.h"
-#include "TextBuffer.h"
+#include <ncpp/ncurses_utilities.h>
+#include <text_buffer/TextBuffer.h>
 
 #include <optional>
 #include <unordered_map>

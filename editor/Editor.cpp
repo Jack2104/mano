@@ -1,6 +1,6 @@
 #include "Editor.h"
 
-#include <limits.h>
+#include <limits>
 #include <fstream>
 
 Editor::Editor()

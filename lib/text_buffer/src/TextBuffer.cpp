@@ -1,5 +1,6 @@
-#include "TextBuffer.h"
+#include "text_buffer/TextBuffer.h"
 
+#include <algorithm>
 #include <fstream>
 
 TextBuffer::TextBuffer()
