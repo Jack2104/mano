@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+// TODO: use string_view instead of string
+
 namespace ncpp
 {
     Window::Window() : Window(0, 0, 0, 0) {};
@@ -24,17 +26,17 @@ namespace ncpp
 
     void Window::move_cursor(int row, int col)
     {
-        wmove(window_ptr, row, col);
+        wmove(window_ptr, row, row == 0 ? col + preamble.length() : col);
     }
 
     void Window::display_text(std::string text)
     {
         current_text = text;
-        std::string filled_text = text;
+        std::string filled_text = preamble + text;
 
         if (fill_pattern != "")
         {
-            auto newline_count = static_cast<int>(std::ranges::count(text, '\n'));
+            auto newline_count = static_cast<int>(std::ranges::count(filled_text, '\n'));
             int fill_count = std::max(height - newline_count - 1, 0);
 
             for (int i = 0; i < fill_count; i++)
@@ -98,5 +100,15 @@ namespace ncpp
 
     bool Window::expands_vertically() { return expand_vertically; }
     bool Window::expands_horizontally() { return expand_horizontally; }
+
+    void Window::set_preamble(std::string text)
+    {
+        if (row == 0)
+            col += text.length() - preamble.length();
+
+        preamble = text;
+
+        display_text(current_text);
+    }
 
 } /* namespace ncpp */

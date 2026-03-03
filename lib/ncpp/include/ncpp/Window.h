@@ -34,6 +34,8 @@ namespace ncpp
         bool expands_vertically();
         bool expands_horizontally();
 
+        void set_preamble(std::string text);
+
     protected:
         WINDOW *window_ptr; // Not a unique_ptr because WINDOW* has a special delete function
 
@@ -44,7 +46,8 @@ namespace ncpp
         bool expand_vertically = false;
         bool expand_horizontally = true;
 
-        std::string current_text;
-        std::string fill_pattern;
+        std::string current_text = "";
+        std::string fill_pattern = "";
+        std::string preamble = "";
     };
 }

@@ -224,6 +224,7 @@ void Editor::start_state_machine()
                 return;
 
             change_state(Mode::SAVING);
+            current_ctx.window->set_preamble("Save project: ");
             break;
         case ncpp::CTRL_S:
             saved = true;
