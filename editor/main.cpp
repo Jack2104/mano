@@ -6,8 +6,12 @@
 
 #include "Editor.h"
 
+#include <io_backend/FileBackend.h>
+
 int main(int argc, char *argv[])
 {
+    IOBackend *backend = new FileBackend();
+    // Editor editor = Editor(backend);
     Editor editor = Editor();
     editor.start_state_machine();
 

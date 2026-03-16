@@ -12,6 +12,3 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/in
 set(CURSES_NEED_NCURSES TRUE)
 find_package(Curses)
 target_link_libraries(${PROJECT_NAME} PRIVATE Curses)
-
-message("${CURSES_LIBRARIES}")
-message("${CURSES_INCLUDE_DIR}")

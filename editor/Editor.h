@@ -4,9 +4,11 @@
 #include <ncpp/Window.h>
 #include <ncpp/Layout.h>
 #include <text_buffer/TextBuffer.h>
+#include <io_backend/IOBackend.h>
 
 #include <optional>
 #include <unordered_map>
+#include <memory>
 
 enum class Mode
 {
@@ -32,11 +34,13 @@ class Editor
 {
 public:
     Editor();
+    Editor(IOBackend *io_backend) : backend(io_backend) {};
     ~Editor();
 
     void start_state_machine();
 
 private:
+    IOBackend *backend;
     Mode current_state = Mode::EDITING;
 
     std::shared_ptr<TextBuffer> document_text;
@@ -63,6 +67,7 @@ private:
     char command_delim = ':';
 
     bool saved = true;
+    std::string file_path = "";
 
     void set_cursor_pos(const Cursor &new_cursor);
     void change_state(Mode new_state);

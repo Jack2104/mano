@@ -1,5 +1,7 @@
 #include "Editor.h"
 
+#include <io_backend/FileBackend.h>
+
 #include <limits>
 #include <fstream>
 
@@ -258,6 +260,13 @@ void Editor::start_state_machine()
             }
             else if (current_state == Mode::SAVING)
             {
+                if (current_ctx.text->is_empty())
+                    break;
+
+                file_path = current_ctx.text->get_text();
+
+                backend->save(file_path, document_ctx.text->get_text());
+
                 saved = true;
                 return;
             }
